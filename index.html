@@ -13,6 +13,11 @@
     <button id="startAR">🚀 Запустить AR</button>
   </div>
 
-  <script src="main.js"></script>
+  <script>
+    document.getElementById("startAR").addEventListener("click", () => {
+      // Переход на страницу с AR
+      window.location.href = "ar.html";
+    });
+  </script>
 </body>
 </html>
