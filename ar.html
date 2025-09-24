@@ -26,7 +26,7 @@
     document.body.appendChild(renderer.domElement);
 
     // Ищем источник камеры и инициализируем по идее
-    const source = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+    const source = new THREEx.ArToolkitSource({ sourceType: 'webcam', sourceWidth: 1920, sourceHeight: 1080}); 
     source.init(() => onResize());
     window.addEventListener('resize', () => onResize());
     function onResize() {
