@@ -3,26 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Камера</title>
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.2.1/aframe/build/aframe-ar.js"></script>
-  <style>
-    body, html {
-      margin: 0;
-      overflow: hidden;
-      height: 100%;
-      background: #000;
-    }
-  </style>
+  <title>AR Camera</title>
+
+  <!-- Библиотека Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- AR.js для Three.js -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
+
+  <link rel="stylesheet" href="ar_style.css"/>
 </head>
 <body>
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    arjs="sourceType: webcam; debugUIEnabled: false;">
+  <script>
+    // Создаем сцену и камеру
+    const scene = new THREE.Scene();
+    const camera = new THREE.Camera();
+    scene.add(camera);
     
-    <!-- Камера -->
-    <a-entity camera></a-entity>
-  </a-scene>
+    // Рендерим камеру????
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Ищем источник камеры и инициализируем по идее
+    const source = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+    source.init(() => onResize());
+    window.addEventListener('resize', () => onResize());
+    function onResize() {
+      source.onResizeElement();
+      source.copyElementSizeTo(renderer.domElement);
+      if (arToolkitContext.arController !== null) {
+        source.copyElementSizeTo(arToolkitContext.arController.canvas);
+      }
+    }
+
+    //По идее инициализация для работы с AR
+    const arToolkitContext = new THREEx.ArToolkitContext({
+      cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/camera_para.dat',
+      detectionMode: 'mono'
+    });
+    arToolkitContext.init(() => {
+      camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+    });
+
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    if (source.ready) {
+      arToolkitContext.update(source.domElement); // обновляем AR и ищем маркеры
+    }
+
+    renderer.render(scene, camera); // рендерим сцену
+  }
+
+  animate(); // запускаем цикл
+
+</script>
 </body>
 </html>
