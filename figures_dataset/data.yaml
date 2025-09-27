@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 4
+names: ['cheburashka', 'gena', 'shapoklyak', 'volk']
+
+roboflow:
+  workspace: souzmult
+  project: souzmult-gqc4d
+  version: 1
+  license: Private
+  url: https://app.roboflow.com/souzmult/souzmult-gqc4d/1
