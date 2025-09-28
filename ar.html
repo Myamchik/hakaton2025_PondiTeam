@@ -12,53 +12,100 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
 
   <link rel="stylesheet" href="ar_style.css"/>
+  <style>
+    #orientationWarning {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5em;
+      text-align: center;
+      z-index: 9999;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <script>
-    // Создаем сцену и камеру
-    const scene = new THREE.Scene();
-    const camera = new THREE.Camera();
-    scene.add(camera);
-    
-    // Рендерим камеру????
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+  <div id="orientationWarning">
+    Пожалуйста отключите автоматическую ориентацию экрана,<br>
+    а затем снова поверните ваш телефон вертикально
+  </div>
 
-    // Ищем источник камеры и инициализируем по идее
-    const source = new THREEx.ArToolkitSource({ sourceType: 'webcam', sourceWidth: 1920, sourceHeight: 1080}); 
-    source.init(() => onResize());
-    window.addEventListener('resize', () => onResize());
-    function onResize() {
-      source.onResizeElement();
-      source.copyElementSizeTo(renderer.domElement);
-      if (arToolkitContext.arController !== null) {
-        source.copyElementSizeTo(arToolkitContext.arController.canvas);
+  <script>
+    let scene, camera, renderer, source, arToolkitContext;
+
+    function initAR() {
+      // Создаем сцену и камеру
+      scene = new THREE.Scene();
+      camera = new THREE.Camera();
+      scene.add(camera);
+
+      // Рендерим камеру
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Источник камеры
+      source = new THREEx.ArToolkitSource({ sourceType: 'webcam', sourceWidth: 1920, sourceHeight: 1080 }); 
+      source.init(() => onResize());
+      window.addEventListener('resize', () => onResize());
+
+      function onResize() {
+        source.onResizeElement();
+        source.copyElementSizeTo(renderer.domElement);
+        if (arToolkitContext.arController !== null) {
+          source.copyElementSizeTo(arToolkitContext.arController.canvas);
+        }
+      }
+
+      // AR контекст
+      arToolkitContext = new THREEx.ArToolkitContext({
+        cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/camera_para.dat',
+        detectionMode: 'mono'
+      });
+      arToolkitContext.init(() => {
+        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (source && source.ready && arToolkitContext) {
+        arToolkitContext.update(source.domElement);
+      }
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    // Инициализация AR при загрузке
+    initAR();
+    animate();
+
+    // Отслеживаем ориентацию
+    const warningDiv = document.getElementById('orientationWarning');
+
+    function checkOrientation() {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      if (!isPortrait) {
+        warningDiv.style.display = 'flex';
+      } else {
+        if (warningDiv.style.display === 'flex') {
+          // Пользователь вернул телефон в портрет
+          warningDiv.style.display = 'none';
+
+          // Сброс AR сцены
+          if (renderer) document.body.removeChild(renderer.domElement);
+          initAR();
+        }
       }
     }
 
-    //По идее инициализация для работы с AR
-    const arToolkitContext = new THREEx.ArToolkitContext({
-      cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/camera_para.dat',
-      detectionMode: 'mono'
-    });
-    arToolkitContext.init(() => {
-      camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-    });
+    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('resize', checkOrientation);
 
-
-  function animate() {
-    requestAnimationFrame(animate);
-
-    if (source.ready) {
-      arToolkitContext.update(source.domElement); // обновляем AR и ищем маркеры
-    }
-
-    renderer.render(scene, camera); // рендерим сцену
-  }
-
-  animate(); // запускаем цикл
-
-</script>
+  </script>
 </body>
 </html>
