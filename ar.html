@@ -11,6 +11,8 @@
   <!-- AR.js для Three.js -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.23.0/dist/tf.min.js"></script>
+
   <link rel="stylesheet" href="ar_style.css"/>
   <style>
     #orientationWarning {
@@ -36,7 +38,16 @@
   </div>
 
   <script>
-    let scene, camera, renderer, source, arToolkitContext;
+    let scene, camera, renderer, source, arToolkitContext, model;
+
+    async function loadModel() {
+      // Загружаем модель TF.js
+      model = await tf.loadGraphModel('./tfjs_model/model.json');
+      console.log('Модель успешно загружена:', model);
+    }
+
+    // Загружаем модель при старте
+    loadModel();
 
     function initAR() {
       // Создаем сцену и камеру
@@ -70,6 +81,13 @@
       arToolkitContext.init(() => {
         camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
       });
+
+      // --- ТЕСТОВЫЙ ОБЪЕКТ ---
+      const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.z = -1; // Отодвигаем на 1 метр вперед
+      scene.add(cube);
     }
 
     function animate() {
