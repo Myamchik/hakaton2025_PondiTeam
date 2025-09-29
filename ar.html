@@ -1,129 +1,216 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Camera</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Camera</title>
 
-  <!-- Библиотека Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
 
-  <!-- AR.js для Three.js -->
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
+    <link rel="stylesheet" href="ar_style.css"/>
+    <style>
+      #orientationWarning {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5em;
+        text-align: center;
+        z-index: 9999;
+        display: none;
+      }
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.23.0/dist/tf.min.js"></script>
+      canvas#overlay {
+        position: fixed;
+        top: 0; left: 0;
+        z-index: 9998;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="orientationWarning">
+      Пожалуйста отключите автоматическую ориентацию экрана,<br>
+      а затем снова поверните ваш телефон вертикально
+    </div>
 
-  <link rel="stylesheet" href="ar_style.css"/>
-  <style>
-    #orientationWarning {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 1.5em;
-      text-align: center;
-      z-index: 9999;
-      display: none;
-    }
-  </style>
-</head>
-<body>
-  <div id="orientationWarning">
-    Пожалуйста отключите автоматическую ориентацию экрана,<br>
-    а затем снова поверните ваш телефон вертикально
-  </div>
+    <canvas id="overlay"></canvas>
 
-  <script>
-    let scene, camera, renderer, source, arToolkitContext, model;
+    <script>
+      let scene, camera, renderer, source, arToolkitContext, model;
+      let overlay, overlayCtx;
+      let frameCounter = 0;
 
-    async function loadModel() {
-      // Загружаем модель TF.js
-      model = await tf.loadGraphModel('./tfjs_model/model.json');
-      console.log('Модель успешно загружена:', model);
-    }
+      // ---------------- Overlay ----------------
+      function initOverlay() {
+        overlay = document.getElementById('overlay');
+        overlay.width = window.innerWidth;
+        overlay.height = window.innerHeight;
+        overlayCtx = overlay.getContext('2d');
 
-    // Загружаем модель при старте
-    loadModel();
+        window.addEventListener('resize', () => {
+          overlay.width = window.innerWidth;
+          overlay.height = window.innerHeight;
+        });
+      }
 
-    function initAR() {
-      // Создаем сцену и камеру
-      scene = new THREE.Scene();
-      camera = new THREE.Camera();
-      scene.add(camera);
+      // ---------------- AR.js ----------------
+      function initAR() {
+        scene = new THREE.Scene();
+        camera = new THREE.Camera();
+        scene.add(camera);
 
-      // Рендерим камеру
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+        renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-      // Источник камеры
-      source = new THREEx.ArToolkitSource({ sourceType: 'webcam', sourceWidth: 1920, sourceHeight: 1080 }); 
-      source.init(() => onResize());
-      window.addEventListener('resize', () => onResize());
+        source = new THREEx.ArToolkitSource({sourceType:'webcam', sourceWidth:1920, sourceHeight:1080});
+        source.init(() => onResize());
+        window.addEventListener('resize', () => onResize());
 
-      function onResize() {
-        source.onResizeElement();
-        source.copyElementSizeTo(renderer.domElement);
-        if (arToolkitContext.arController !== null) {
-          source.copyElementSizeTo(arToolkitContext.arController.canvas);
+        function onResize() {
+          source.onResizeElement();
+          source.copyElementSizeTo(renderer.domElement);
+          if(arToolkitContext && arToolkitContext.arController)
+            source.copyElementSizeTo(arToolkitContext.arController.canvas);
         }
+
+        arToolkitContext = new THREEx.ArToolkitContext({
+          cameraParametersUrl: './camera_para.dat',
+          detectionMode: 'mono'
+        });
+
+        arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()));
       }
 
-      // AR контекст
-      arToolkitContext = new THREEx.ArToolkitContext({
-        cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/camera_para.dat',
-        detectionMode: 'mono'
-      });
-      arToolkitContext.init(() => {
-        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-      });
+      // ---------------- Capture frame ----------------
+      function captureFrame() {
+        if(!source || !source.ready) return null;
+        let tensor = tf.browser.fromPixels(source.domElement);
+        tensor = tf.image.resizeBilinear(tensor, [416,416]);
+        tensor = tensor.expandDims(0).toFloat().div(tf.scalar(255));
+        return tensor;
+      }
 
-      // --- ТЕСТОВЫЙ ОБЪЕКТ ---
-      const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const cube = new THREE.Mesh(geometry, material);
-      cube.position.z = -1; // Отодвигаем на 1 метр вперед
-      scene.add(cube);
-    }
+      // ---------------- Decode YOLO ----------------
+      function decodeYOLO(predictions, overlayWidth, overlayHeight, confThreshold=0.3) {
+        const data = predictions.arraySync()[0]; // [8,3549]
+        const boxes = [];
+        const inputSize = 416; 
+        const scaleX = overlayWidth / inputSize;
+        const scaleY = overlayHeight / inputSize;
 
-    function animate() {
-      requestAnimationFrame(animate);
-      if (source && source.ready && arToolkitContext) {
+        for(let i=0;i<data[0].length;i++){
+          const objConf = data[4][i];
+          if(objConf < confThreshold) continue;
+
+          const cx = data[0][i]*scaleX;
+          const cy = data[1][i]*scaleY;
+          const w = data[2][i]*scaleX;
+          const h = data[3][i]*scaleY;
+
+          boxes.push({x: cx-w/2, y: cy-h/2, w, h, cx, cy, conf: objConf});
+        }
+        return boxes;
+      }
+
+      // ---------------- Animate ----------------
+      async function animate() {
+        requestAnimationFrame(animate);
+        if(!(source && source.ready && arToolkitContext)) return;
         arToolkitContext.update(source.domElement);
+
+        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+        frameCounter++;
+
+        if(model && frameCounter % 5 === 0){
+          const input = captureFrame();
+          if(input){
+            try {
+              const predictions = await model.executeAsync(input);
+              const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
+              tf.dispose(predictions);
+              tf.dispose(input);
+
+              overlayCtx.strokeStyle='lime';
+              overlayCtx.fillStyle='red';
+              overlayCtx.lineWidth=2;
+
+              boxes.forEach(b=>{
+                overlayCtx.strokeRect(b.x,b.y,b.w,b.h);
+                overlayCtx.beginPath();
+                overlayCtx.arc(b.cx,b.cy,3,0,2*Math.PI);
+                overlayCtx.fill();
+              });
+            } catch(e){ console.error(e); }
+          }
+        }
+
+        if(renderer && scene && camera) renderer.render(scene, camera);
       }
-      if (renderer && scene && camera) renderer.render(scene, camera);
-    }
 
-    // Инициализация AR при загрузке
-    initAR();
-    animate();
+      // ---------------- Init ----------------
+      window.addEventListener('DOMContentLoaded', async ()=>{
+        initOverlay();
+        initAR();
 
-    // Отслеживаем ориентацию
-    const warningDiv = document.getElementById('orientationWarning');
+        console.log("📦 Загружаем модель...");
+        try{
+          model = await tf.loadGraphModel('./tfjs_model/model.json');
+          console.log('✅ Модель загружена!');
+        } catch(e){ console.error(e); }
 
-    function checkOrientation() {
-      const isPortrait = window.innerHeight > window.innerWidth;
-      if (!isPortrait) {
-        warningDiv.style.display = 'flex';
-      } else {
-        if (warningDiv.style.display === 'flex') {
-          // Пользователь вернул телефон в портрет
-          warningDiv.style.display = 'none';
+        animate();
+      });
 
-          // Сброс AR сцены
-          if (renderer) document.body.removeChild(renderer.domElement);
+      // ---------------- Orientation ----------------
+      const warningDiv = document.getElementById('orientationWarning');
+      function checkOrientation(){
+        const isPortrait = window.innerHeight > window.innerWidth;
+        if(!isPortrait){
+          warningDiv.style.display='flex';
+        } else if(warningDiv.style.display==='flex'){
+          warningDiv.style.display='none';
+          if(renderer) document.body.removeChild(renderer.domElement);
           initAR();
         }
       }
-    }
+      window.addEventListener('orientationchange', checkOrientation);
+      window.addEventListener('resize', checkOrientation);
 
-    window.addEventListener('orientationchange', checkOrientation);
-    window.addEventListener('resize', checkOrientation);
+      // ---------------- Log on screen ----------------
+      function logOnScreen(message){
+        let logDiv = document.getElementById('log');
+        if(!logDiv){
+          logDiv = document.createElement('div');
+          logDiv.id='log';
+          logDiv.style.position='fixed';
+          logDiv.style.bottom='0';
+          logDiv.style.left='0';
+          logDiv.style.width='100%';
+          logDiv.style.maxHeight='40vh';
+          logDiv.style.overflowY='auto';
+          logDiv.style.background='rgba(0,0,0,0.8)';
+          logDiv.style.color='#0f0';
+          logDiv.style.fontSize='12px';
+          logDiv.style.padding='5px';
+          logDiv.style.zIndex='9999';
+          document.body.appendChild(logDiv);
+        }
+        logDiv.innerHTML += message+'<br>';
+      }
 
-  </script>
-</body>
+      const originalLog = console.log;
+      console.log = function(...args){
+        originalLog.apply(console,args);
+        logOnScreen(args.map(a=>JSON.stringify(a)).join(' '));
+      };
+    </script>
+  </body>
 </html>
