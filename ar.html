@@ -1,111 +1,69 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Camera</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindAR Image Tracking (Исправлено)</title>
 
-  <!-- Библиотека Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-  <!-- AR.js для Three.js -->
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
-
-  <link rel="stylesheet" href="ar_style.css"/>
-  <style>
-    #orientationWarning {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 1.5em;
-      text-align: center;
-      z-index: 9999;
-      display: none;
-    }
-  </style>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
+    <link rel="stylesheet" href="ar_style.css"/>
+    <style>
+        /* Стили для предупреждения об ориентации - Оставляем, хотя MindAR обрабатывает ориентацию лучше */
+        #orientationWarning {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5em; text-align: center;
+            z-index: 9999;
+            /* По умолчанию скрыт. Мы не будем использовать JavaScript для его отображения,
+               но оставим стили на случай, если вы добавите логику */
+            display: none; 
+        }
+    </style>
 </head>
 <body>
-  <div id="orientationWarning">
-    Пожалуйста отключите автоматическую ориентацию экрана,<br>
-    а затем снова поверните ваш телефон вертикально
-  </div>
+    <div id="orientationWarning">
+        Пожалуйста, поверните ваше устройство вертикально.
+    </div>
+    
+    <a-scene 
+      mindar-image="imageTargetSrc: ./data/targets.mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false"
+      renderer="logarithmicDepthBuffer: true; antialias: true; precision: medium;"
+      allow-media-access="true">
+      
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <script>
-    let scene, camera, renderer, source, arToolkitContext;
+      <a-entity mindar-image-target="targetIndex: 0">
+        
+        <a-gltf-model src="./3d_models/boombox.glb" 
+              rotation="0 0 0" 
+              position="0 0.05 0" 
+              scale="0.1 0.1 0.1">
+</a-gltf-model>
+        
+        <a-entity light="type: ambient; intensity: 1.0"></a-entity>
+        <a-entity light="type: directional; intensity: 0.5; position: 1 1 1"></a-entity>
+        
+      </a-entity>
+      
+    </a-scene>
 
-    function initAR() {
-      // Создаем сцену и камеру
-      scene = new THREE.Scene();
-      camera = new THREE.Camera();
-      scene.add(camera);
+    <script>
+        // MindAR сам обрабатывает инициализацию, но мы можем добавить логику для 
+        // запроса разрешений, если это требуется браузером (например, на iOS 13+).
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("MindAR Scene loaded. Ready to start.");
+        });
 
-      // Рендерим камеру
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      // Источник камеры
-      source = new THREEx.ArToolkitSource({ sourceType: 'webcam', sourceWidth: 1920, sourceHeight: 1080 }); 
-      source.init(() => onResize());
-      window.addEventListener('resize', () => onResize());
-
-      function onResize() {
-        source.onResizeElement();
-        source.copyElementSizeTo(renderer.domElement);
-        if (arToolkitContext.arController !== null) {
-          source.copyElementSizeTo(arToolkitContext.arController.canvas);
-        }
-      }
-
-      // AR контекст
-      arToolkitContext = new THREEx.ArToolkitContext({
-        cameraParametersUrl: 'https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/camera_para.dat',
-        detectionMode: 'mono'
-      });
-      arToolkitContext.init(() => {
-        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-      });
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      if (source && source.ready && arToolkitContext) {
-        arToolkitContext.update(source.domElement);
-      }
-      if (renderer && scene && camera) renderer.render(scene, camera);
-    }
-
-    // Инициализация AR при загрузке
-    initAR();
-    animate();
-
-    // Отслеживаем ориентацию
-    const warningDiv = document.getElementById('orientationWarning');
-
-    function checkOrientation() {
-      const isPortrait = window.innerHeight > window.innerWidth;
-      if (!isPortrait) {
-        warningDiv.style.display = 'flex';
-      } else {
-        if (warningDiv.style.display === 'flex') {
-          // Пользователь вернул телефон в портрет
-          warningDiv.style.display = 'none';
-
-          // Сброс AR сцены
-          if (renderer) document.body.removeChild(renderer.domElement);
-          initAR();
-        }
-      }
-    }
-
-    window.addEventListener('orientationchange', checkOrientation);
-    window.addEventListener('resize', checkOrientation);
-
-  </script>
+        // ПРИМЕЧАНИЕ: Функции initAR(), animate(), checkOrientation и все переменные 
+        // (scene, camera, arToolkitContext и т.д.) удалены.
+    </script>
 </body>
 </html>
