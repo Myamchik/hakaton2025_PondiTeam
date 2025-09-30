@@ -7,9 +7,9 @@
 
 body {
   font-family: 'Soyuzmult', sans-serif;
-  background-color: #785EFF;
+  background-color: #5ea9ff;
   padding: 4px ; 
-  margin: 0;
+  margin: 0 auto;
   overflow-x: hidden;
 }
 
@@ -21,19 +21,13 @@ body {
   100% { transform: translatey(0px); }
 }
 
-/* Анимация для кнопки
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-} */
-
 .container {
   text-align: center;
   max-width: 600px;
   padding: 20px;
-  width: 95%;
   margin: 20px auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .cloud {
@@ -41,7 +35,7 @@ body {
   width: 95%; 
   max-width: 700px;
   margin: 20px auto;
-  margin-right: 17px;
+  margin-top: 10%;
   animation: float 4s ease-in-out infinite;
 }
 
@@ -50,11 +44,14 @@ body {
   height: auto;
   display: block;
   overflow: visible; 
+  transform: scale(1.1);
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.2)); 
+  opacity: 0.9 ;
 } 
 
 .cloud svg path {
-  fill: white;
-  stroke: #ddd;
+  fill: rgb(255, 255, 255);
+  stroke: #eaeaea;
   stroke-width: 6px;
   stroke-linejoin: round; 
   stroke-linecap: round;
@@ -71,106 +68,190 @@ body {
 }
 
 .cloud-content h1 {
-  color: #5CCF54;
+  color:#face18;
   font-size: 24px;
   margin-bottom: 15px;
+  -webkit-text-stroke: 1px #5ea9ff;
 }
 
 .cloud-content p {
   font-size: 16px;
   margin-bottom: 20px;
+  color:#5e5d5d;
 }
 
-.cloud-content button {
-  background: #5CCF54;
-  color: white;
-  border: none;
-  padding: 10px 24px; 
-  border-radius: 20px;
-  font-size: 15px; 
-  cursor: pointer;
-  margin-bottom: 15px;
-  font-family: 'Soyuzmult', sans-serif;
-  /* animation: pulse 2s ease-in-out infinite; */
-}
-
-.cloud-content button:hover {
-  background: #256b25;
-}
-
-.faq {
-  margin-top: 120px;
-  width: 95%;
+.block {
+  width: 85%;
+  margin: 0 auto;
+  display: flex;               /* включаем flex */
+  justify-content: center;     /* центрируем по горизонтали */
+  align-items: center;         /* центрируем по вертикали */                 /* расстояние между персонажем и кнопкой */
+  padding: 20px 0;
   position: relative;
+}
+
+.cta-wrapper {
+  display: flex;
+  align-items: center; /* чтобы кнопка и персонаж были по одной линии */
+  position: relative;
+  padding-right: 5px;
+}
+
+.rat-tracks {
+    position: absolute;
+    bottom: -5%;
+    left: 0;
+    width: 100%; /* Ширина на 100% от .block (85% экрана) */
+    height: 50px;
+    z-index: 0;
+}
+
+/* --- Общие стили для каждой кляксы --- */
+.splatter {
+  position: absolute;
+  background: url('./images/paw.png') no-repeat center/contain;
+  opacity: 0; 
+  --rotation: 0deg; 
+  animation: splatterAppear 7s ease-out forwards 0.1s;
+}
+
+/* --- Анимация появления и смещения для клякс (Оставим ту же) --- */
+@keyframes splatterAppear {
+  0% { opacity: 0; } 
+  10% { opacity: 0.6; } /* Клякса появляется */
+  20% { opacity: 0.8; } /* Клякса остается видимой */
+  100% { opacity: 0.8; }
+}
+
+/* --- Индивидуальные настройки и анимации (Исправлено) --- */
+
+/* Кляксы начинаются с отрицательного 'left', чтобы быть за кадром */
+.splatter-1 {
+  width: 4vw; 
+  height: 4vw;
+  left: -10vw; 
+  bottom: 0vh; 
+  --rotation: -10deg; 
+  animation-delay: 0s; /* Первая клякса появляется сразу */
+}
+
+.splatter-2 {
+  width: 5.5vw;
+  height: 5.5vw;
+  left: -3vw;
+  bottom: 1.5vh;
+  --rotation: 15deg;
+  animation-delay: 0.5s; /* Появится через 0.5 секунды */
+}
+
+.splatter-3 {
+  width: 4.8vw;
+  height: 4.8vw;
+  left: 5vw; 
+  bottom: 0.3vh;
+  --rotation: -5deg;
+  animation-delay: 1.0s; /* Появится через 1.0 секунду */
+}
+
+.splatter-4 {
+  width: 6.5vw;
+  height: 6.5vw;
+  left: 12vw; 
+  bottom: -2vh;
+  --rotation: 20deg;
+  animation-delay: 1.5s;
+}
+
+.splatter-5 {
+  width: 4.2vw;
+  height: 4.2vw;
+  left: 20vw; 
+  bottom: 0vh;
+  --rotation: -12deg;
+  animation-delay: 2.0s;
+}
+
+/* --- Персонаж и Кнопка --- */
+.character {
+  width: 120px;
+  height: 160px;
+  background: url('./images/CH_Series_Lariska_POSE_01.png') no-repeat center/contain;
+  position: relative;
+}
+
+.cta-button {
+  margin-top: 10px;
+  margin-left: -60px; /* подвигаем кнопку ближе к руке */
+  position: relative; /* чтобы кнопка оставалась в потоке */
+  z-index: 1;         /* кнопка поверх персонажа */
+  width: 220px;
+  height: 65px; 
+  padding: 10px 15px; 
+  border-radius: 35px; 
+  background-color: #face18;
+  font-family: 'Soyuzmult';
+  color: #ffffff; 
+  font-size: 1.3em;
+  font-weight: 700;
+  border: 2px solid #f4bd25;
+}
+
+.camera-icon, .info-icon {
+    /* Фиксированный размер, чтобы иконка не была слишком большой */
+    width: 24px; 
+    height: 24px;
+    
+    /* Добавляем небольшой отступ справа, чтобы отделить иконку от текста */
+    margin-right: 4px; 
+    
+    /* Гарантируем вертикальное выравнивание */
+    vertical-align: middle; 
 }
 
 .faq-question {
   width: 100%;
-  background: #8971f6;
-  color:  white;
+  background: none;
+  color:  #767676;
   border: none;
-  border-radius: 10px;
   padding: 12px;
   font-size: 1rem;
   text-align: center;
-  cursor: pointer;
   outline: none;
   transition: background 0.3s ease;
   text-decoration: underline;
   font-family: 'Soyuzmult';
-}
-
-.faq-question:hover,
-.faq-question.active {
-  background: #4F3BB2;;
-  
+  bottom: 0px;
 }
 
 .faq-answer {
-  display: none;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  margin-top: 10px;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color:#face18;
+    display: none;
+    padding: 15px;
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.2); 
+    backdrop-filter: blur(8px);        
+    -webkit-backdrop-filter: blur(8px);   
+    
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
+    
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 1rem;
+    color: #ffffff; 
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.character {
-  position: absolute; 
-  bottom: 0;
-  right: -20px;
-  width: 150px;
-  height: 200px; 
-  background-image: url('./images/krolik.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  z-index: 100;
-}
-
-.character.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
 @media (max-width: 480px) {
   .cloud-content {
     width: 85%;
   }
 
   .cloud-content h1 {
-    font-size: 20px;
+    font-size: 30px;
     margin-top: 40px;
     line-height: 1.2;
   }
 
   .cloud-content p {
-    font-size: 14px;
-  }
-
-  .cloud-content button {
-    padding: 10px 20px;
     font-size: 14px;
   }
 }
