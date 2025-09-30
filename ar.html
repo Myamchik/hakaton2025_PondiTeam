@@ -99,61 +99,97 @@
       }
 
       // ---------------- Decode YOLO ----------------
-      function decodeYOLO(predictions, overlayWidth, overlayHeight, confThreshold=0.3) {
-        const data = predictions.arraySync()[0]; // [8,3549]
-        const boxes = [];
-        const inputSize = 416; 
-        const scaleX = overlayWidth / inputSize;
-        const scaleY = overlayHeight / inputSize;
+      function decodeYOLO(predictions, overlayWidth, overlayHeight, confThreshold = 0.3) {
+      const data = predictions.arraySync()[0]; // [8, 3549]
+      const boxes = [];
+      const inputSize = 416;
+      const scaleX = overlayWidth / inputSize;
+      const scaleY = overlayHeight / inputSize;
 
-        for(let i=0;i<data[0].length;i++){
-          const objConf = data[4][i];
-          if(objConf < confThreshold) continue;
+      const numBoxes = data[0].length;
 
-          const cx = data[0][i]*scaleX;
-          const cy = data[1][i]*scaleY;
-          const w = data[2][i]*scaleX;
-          const h = data[3][i]*scaleY;
+      for (let i = 0; i < numBoxes; i++) {
+        const objConf = 1 / (1 + Math.exp(-data[4][i])); // сигмоида
 
-          boxes.push({x: cx-w/2, y: cy-h/2, w, h, cx, cy, conf: objConf});
-        }
-        return boxes;
-      }
+        let bestClassIdx = -1;
+        let bestClassScore = 0;
 
-      // ---------------- Animate ----------------
-      async function animate() {
-        requestAnimationFrame(animate);
-        if(!(source && source.ready && arToolkitContext)) return;
-        arToolkitContext.update(source.domElement);
-
-        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-        frameCounter++;
-
-        if(model && frameCounter % 5 === 0){
-          const input = captureFrame();
-          if(input){
-            try {
-              const predictions = await model.executeAsync(input);
-              const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
-              tf.dispose(predictions);
-              tf.dispose(input);
-
-              overlayCtx.strokeStyle='lime';
-              overlayCtx.fillStyle='red';
-              overlayCtx.lineWidth=2;
-
-              boxes.forEach(b=>{
-                overlayCtx.strokeRect(b.x,b.y,b.w,b.h);
-                overlayCtx.beginPath();
-                overlayCtx.arc(b.cx,b.cy,3,0,2*Math.PI);
-                overlayCtx.fill();
-              });
-            } catch(e){ console.error(e); }
+        for (let c = 5; c < data.length; c++) {
+          const classScore = 1 / (1 + Math.exp(-data[c][i]));
+          if (classScore > bestClassScore) {
+            bestClassScore = classScore;
+            bestClassIdx = c - 5;
           }
         }
 
-        if(renderer && scene && camera) renderer.render(scene, camera);
+        // 🔥 Финальная уверенность как произведение
+        const finalConf = objConf * bestClassScore;
+
+        if (finalConf < confThreshold) continue;
+
+        const cx = data[0][i] * scaleX;
+        const cy = data[1][i] * scaleY;
+        const w = data[2][i] * scaleX;
+        const h = data[3][i] * scaleY;
+
+        boxes.push({
+          x: cx - w / 2,
+          y: cy - h / 2,
+          w,
+          h,
+          cx,
+          cy,
+          conf: finalConf,
+          cls: bestClassIdx
+        });
       }
+
+      console.log("📊 Примеры боксов:", boxes.slice(0, 10));
+      return boxes;
+    }
+
+
+
+      // ---------------- Animate ----------------
+      async function animate() {
+      requestAnimationFrame(animate);
+      if(!(source && source.ready && arToolkitContext)) return;
+      arToolkitContext.update(source.domElement);
+
+      overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+      frameCounter++;
+
+      if(model && frameCounter % 5 === 0){
+        const input = captureFrame();
+        if(input){
+          try {
+            const predictions = await model.executeAsync(input);
+            const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
+            tf.dispose(predictions);
+            tf.dispose(input);
+
+            overlayCtx.strokeStyle='lime';
+            overlayCtx.fillStyle='red';
+            overlayCtx.lineWidth=2;
+
+            boxes.forEach(b=>{
+              overlayCtx.strokeRect(b.x,b.y,b.w,b.h);
+              overlayCtx.beginPath();
+              overlayCtx.arc(b.cx,b.cy,3,0,2*Math.PI);
+              overlayCtx.fill();
+
+              // ✏️ Подпись класса
+              overlayCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
+              overlayCtx.font = "16px Arial";
+              overlayCtx.fillText(`${b.className} ${(b.conf * 100).toFixed(1)}%`, b.x + 5, b.y - 5);
+              overlayCtx.fillStyle = "red";
+            });
+          } catch(e){ console.error(e); }
+        }
+      }
+
+      if(renderer && scene && camera) renderer.render(scene,camera);
+    }
 
       // ---------------- Init ----------------
       window.addEventListener('DOMContentLoaded', async ()=>{
