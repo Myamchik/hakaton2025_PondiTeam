@@ -32,6 +32,36 @@
         z-index: 9998;
         pointer-events: none;
       }
+
+      #holdMessage {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(160, 86, 202, 0.8);
+        color: #fff;
+        font-size: 1 em;
+        padding: 20px 30px;
+        border-radius: 15px;
+        z-index: 10000;
+        display: none;
+        text-align: center;
+      }
+
+      #overlayGif {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 30vh; /* или 200px */
+        object-fit: cover;
+        z-index: 9999;
+        pointer-events: none;
+        display: none;
+      }
+
+
+
     </style>
   </head>
   <body>
@@ -40,12 +70,21 @@
       а затем снова поверните ваш телефон вертикально
     </div>
 
+    <div id="holdMessage">📍 Держите смартфон так, чтобы точки были на Гене и Шапокляк</div>
+    <img id="overlayGif" src="images/Cloud_Sticker.gif" alt="AR Overlay" />
+
+
+
     <canvas id="overlay"></canvas>
 
     <script>
       let scene, camera, renderer, source, arToolkitContext, model;
       let overlay, overlayCtx;
       let frameCounter = 0;
+
+      let detectionDone = false;
+      let genaCenter = null;
+      let genaDetections = [];
 
       // ---------------- Overlay ----------------
       function initOverlay() {
@@ -150,49 +189,84 @@
 
 
 
-      // ---------------- Animate ----------------
-      async function animate() {
-        requestAnimationFrame(animate);
-        if(!(source && source.ready && arToolkitContext)) return;
-        arToolkitContext.update(source.domElement);
+    // ---------------- Animate ----------------
 
-        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-        frameCounter++;
+    // ---------------- Animate ----------------
+    async function animate() {
+      requestAnimationFrame(animate);
+      if (!(source && source.ready && arToolkitContext)) return;
+      arToolkitContext.update(source.domElement);
 
-        if(model && frameCounter % 5 === 0){
-          const input = captureFrame();
-          if(input){
-            try {
-              const predictions = await model.executeAsync(input);
-              const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
-              tf.dispose(predictions);
-              tf.dispose(input);
+      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      frameCounter++;
 
-              overlayCtx.strokeStyle='lime';
-              overlayCtx.fillStyle='red';
-              overlayCtx.lineWidth=2;
+      if (genaCenter) {
+        // 💡 Рисуем центр Гены
+        overlayCtx.fillStyle = 'cyan';
+        overlayCtx.beginPath();
+        overlayCtx.arc(genaCenter.x, genaCenter.y, 8, 0, 2 * Math.PI);
+        overlayCtx.fill();
+        overlayCtx.fillText("📍 Гена", genaCenter.x + 10, genaCenter.y);
+        return; // ⛔️ прекращаем распознавание
+      }
 
-              boxes.forEach(b=>{
-                // рамка
-                overlayCtx.strokeRect(b.x, b.y, b.w, b.h);
+      if (model && frameCounter % 8 === 0) {
+        const input = captureFrame();
+        if (input) {
+          try {
+            const predictions = await model.executeAsync(input);
+            const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
+            tf.dispose(predictions);
+            tf.dispose(input);
 
-                // точка центра
-                overlayCtx.beginPath();
-                overlayCtx.arc(b.cx, b.cy, 3, 0, 2 * Math.PI);
-                overlayCtx.fill();
+            overlayCtx.strokeStyle = 'lime';
+            overlayCtx.fillStyle = 'red';
+            overlayCtx.lineWidth = 2;
 
-                // подпись класса и уверенности
-                const labels = ["Гена", "Шапокляк", "Чебурашка", "Волк"];
-                overlayCtx.fillStyle = 'yellow';
-                overlayCtx.font = '16px Arial';
-                overlayCtx.fillText(`${labels[b.cls] || "?"} ${(b.conf * 100).toFixed(1)}%`, b.x, b.y - 5);
-              });
-            } catch(e){ console.error(e); }
+            boxes.forEach(b => {
+              overlayCtx.strokeRect(b.x, b.y, b.w, b.h);
+              overlayCtx.beginPath();
+              overlayCtx.arc(b.cx, b.cy, 3, 0, 2 * Math.PI);
+              overlayCtx.fill();
+
+              const labels = ["Гена", "Шапокляк", "Чебурашка", "Волк"];
+              overlayCtx.fillStyle = 'yellow';
+              overlayCtx.font = '16px Arial';
+              overlayCtx.fillText(`${labels[b.cls] || "?"} ${(b.conf * 100).toFixed(1)}%`, b.x, b.y - 5);
+
+              // 📍 Сохраняем центр Гены
+              if (labels[b.cls] === "Гена" && genaDetections.length < 5) {
+                genaDetections.push({ x: b.cx, y: b.cy });
+                console.log("📌 Найдена Гена:", b.cx, b.cy);
+                if (genaDetections.length === 5) {
+                  // средняя точка по 5 кадрам
+                  const sum = genaDetections.reduce((acc, val) => ({ x: acc.x + val.x, y: acc.y + val.y }), {x:0, y:0});
+                  genaCenter = { x: sum.x / 5, y: sum.y / 5 };
+                  console.log("✅ Центр Гены:", genaCenter);
+
+                  // 🛑 Останавливаем модель
+                  model = null;
+
+                  // 📢 Показываем сообщение
+                  const holdMsg = document.getElementById('holdMessage');
+                  holdMsg.style.display = 'block';
+
+                  // ⏱️ Через 10 секунд скрываем сообщение и показываем гифку
+                  setTimeout(() => {
+                    holdMsg.style.display = 'none';
+                    document.getElementById('overlayGif').style.display = 'block';
+                  }, 10000);
+                }
+              }
+            });
+          } catch (e) {
+            console.error(e);
           }
         }
-
-        if(renderer && scene && camera) renderer.render(scene,camera);
       }
+
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
 
       // ---------------- Init ----------------
       window.addEventListener('DOMContentLoaded', async ()=>{
@@ -224,32 +298,32 @@
       window.addEventListener('resize', checkOrientation);
 
       // ---------------- Log on screen ----------------
-      function logOnScreen(message){
-        let logDiv = document.getElementById('log');
-        if(!logDiv){
-          logDiv = document.createElement('div');
-          logDiv.id='log';
-          logDiv.style.position='fixed';
-          logDiv.style.bottom='0';
-          logDiv.style.left='0';
-          logDiv.style.width='100%';
-          logDiv.style.maxHeight='40vh';
-          logDiv.style.overflowY='auto';
-          logDiv.style.background='rgba(0,0,0,0.8)';
-          logDiv.style.color='#0f0';
-          logDiv.style.fontSize='12px';
-          logDiv.style.padding='5px';
-          logDiv.style.zIndex='9999';
-          document.body.appendChild(logDiv);
-        }
-        logDiv.innerHTML += message+'<br>';
-      }
+      // function logOnScreen(message){
+      //   let logDiv = document.getElementById('log');
+      //   if(!logDiv){
+      //     logDiv = document.createElement('div');
+      //     logDiv.id='log';
+      //     logDiv.style.position='fixed';
+      //     logDiv.style.bottom='0';
+      //     logDiv.style.left='0';
+      //     logDiv.style.width='100%';
+      //     logDiv.style.maxHeight='40vh';
+      //     logDiv.style.overflowY='auto';
+      //     logDiv.style.background='rgba(0,0,0,0.8)';
+      //     logDiv.style.color='#0f0';
+      //     logDiv.style.fontSize='12px';
+      //     logDiv.style.padding='5px';
+      //     logDiv.style.zIndex='9999';
+      //     document.body.appendChild(logDiv);
+      //   }
+      //   logDiv.innerHTML += message+'<br>';
+      // }
 
-      const originalLog = console.log;
-      console.log = function(...args){
-        originalLog.apply(console,args);
-        logOnScreen(args.map(a=>JSON.stringify(a)).join(' '));
-      };
+      // const originalLog = console.log;
+      // console.log = function(...args){
+      //   originalLog.apply(console,args);
+      //   logOnScreen(args.map(a=>JSON.stringify(a)).join(' '));
+      // };
     </script>
   </body>
 </html>

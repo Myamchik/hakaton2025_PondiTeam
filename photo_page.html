@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Фото</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      color: white;
+      height: 100vh;
+      margin: 0;
+    }
+    img {
+      max-width: 90%;
+      max-height: 70%;
+      border: 2px solid #fff;
+      margin-bottom: 20px;
+    }
+    a {
+      padding: 10px 20px;
+      background: #0f0;
+      color: #000;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+    a:hover {
+      background: #0c0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ваше фото</h1>
+  <img id="screenshot" src="">
+  <a id="downloadBtn" href="" download="ar_photo.png">Скачать</a>
+
+  <script>
+    // Получаем данные POST (скриншот) через URLSearchParams, если используем GET вместо POST
+    // Для простоты сейчас можно использовать localStorage вместо POST
+    const imgData = localStorage.getItem('arScreenshot');
+    if(imgData){
+      const img = document.getElementById('screenshot');
+      const btn = document.getElementById('downloadBtn');
+      img.src = imgData;
+      btn.href = imgData;
+    } else {
+      document.body.innerHTML = "<h2>Скриншот не найден</h2>";
+    }
+  </script>
+</body>
+</html>
