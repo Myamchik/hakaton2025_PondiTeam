@@ -1,0 +1,105 @@
+@font-face {
+  font-family: 'Soyuzmult';
+  src: url('./fonts/soyuzmult.woff2') format('woff2'),
+       url('./fonts/soyuzmult.woff') format('woff'),
+       url('./fonts/soyuzmult.ttf') format('truetype');
+}
+
+body {
+  font-family: 'Soyuzmult', sans-serif;
+  background-color: #5ea9ff;
+  padding: 4px ; 
+  margin: 0 auto;
+  overflow-x: hidden;
+}
+.page-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+}
+
+/* --- 2. ЗАГОЛОВОК --- */
+.main-title {
+    font-size: 2.8em; 
+    color:#face18;
+    margin-bottom: 25px;
+    /* Мультяшный объемный эффект */
+    text-align: center;
+}
+
+/* --- 3. РАМКА ДЛЯ ФОТО (Стиль: Стикер/Поляроид с мультяшным контуром) --- */
+
+.photo-wrapper {
+    /* Обертка для мягкой тени, чтобы рамка "парила" */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    margin-bottom: 30px;
+    max-width: 90%;
+    
+    /* Добавляем легкий поворот, чтобы выглядело как небрежно брошенный стикер */
+    transform: rotate(-2deg); 
+}
+
+.photo-frame {
+    /* Сама рамка (белая граница поляроида) */
+    background-color: #FFFFFF;
+    padding: 15px 15px 40px 15px; /* Большая нижняя поля, как у Поляроида */
+    position: relative;
+    border: 5px solid #979696; 
+    border-radius: 8px; 
+}
+
+.photo-display {
+    /* Область, где будет отображаться изображение */
+    width: 280px;
+    height: 280px;
+    background-color: #EEEEEE; /* Светло-серый фон для заглушки */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-style: italic;
+    color: #666;
+    
+    /* Стилизация для самого изображения, когда оно загрузится */
+    /* .photo-display img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    } */
+}
+
+/* --- 4. КНОПКА СКАЧАТЬ --- */
+/* Используем стиль "Мультяшный Кристалл" (из предыдущего обсуждения) */
+.glass-crystal-button {
+    /* Стили для кнопки-кристалла */
+    width: 250px;
+    height: 60px;
+    border-radius: 35px;
+    background: rgba(255, 255, 255, 0.4); 
+    backdrop-filter: blur(10px); 
+    border: 3px solid rgba(126, 211, 235, 0.6); /* Бирюзовая обводка */
+    box-shadow: 
+        inset 0 0 10px rgba(255, 255, 255, 0.5), 
+        0 8px 15px rgba(0, 0, 0, 0.15); 
+    color: #444; 
+    font-size: 1.3em;
+    font-weight: 700;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.7);
+    transition: all 0.2s;
+    margin-bottom: 30px;
+}
+.glass-crystal-button:hover {
+    transform: scale(1.05); 
+}
+
+/* --- 5. НИЖНЯЯ ССЫЛКА --- */
+.bottom-link {
+    text-align: center;
+    color: #333;
+}
+.ar-link {
+    color: #2193B0; /* Голубой, соответствующий фону */
+    text-decoration: underline;
+    font-weight: bold;
+}

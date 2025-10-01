@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindAR + Фото</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
+    <link rel="stylesheet" href="ar_style.css"/>
+</head>
+<body>
+    
+<a-scene 
+    mindar-image="imageTargetSrc: ./data/targets (1).mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; antialias: true; precision: medium; preserveDrawingBuffer: true;"
+    mindar-video-background="true"
+    allow-media-access="true">
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    
+    <a-entity mindar-image-target="targetIndex: 0" id="ar-anchor">
+        <a-gltf-model id="ar-model" 
+              src="./3d_models/boombox.glb" 
+              rotation="0 0 0" 
+              position="0 0.05 0" 
+              scale="0.1 0.1 0.1">
+        </a-gltf-model>
+    </a-entity>
+</a-scene>
+
+<button id="captureBtn">Сделать фото</button>
+<script src="./js/ar_wolf.js"></script>
+<script>
+    window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+    });
+</script>
+</body>
+</html>

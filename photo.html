@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Сохранение фото</title>
+    <link rel="stylesheet" href="save_page_style.css" /> 
+</head>
+<body>
+    <div class="page-container">
+    <h1 class="main-title">Ваш AR-Снимок Готов!</h1>
+    
+    <div class="photo-wrapper">
+        <div class="photo-frame">
+            <div class="photo-display">
+                <img id="capturedImageDisplay" src="" alt="Ваш AR-снимок" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <p id="loadingText">Загрузка фото...</p>
+            </div>
+        </div>
+    </div>
+    
+    <a id="downloadBtn" href="#" download="my-ar-photo.png" class="glass-crystal-button" style="text-decoration: none; display: flex; justify-content: center; align-items: center;">
+        ⬇️ Скачать снимок
+    </a>
+    
+    <div class="bottom-link">
+        <a href="index.html" class="ar-link">Попробовать еще раз</a>
+        <p>Посетите увлекательный парк! Окунитесь в мир новых впечатлений и познакомьтесь с интерактивными экспонатами. </p>
+        <a href="https://souzmultpark.ru/#about">Подробнее</a>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Получаем полные данные из localStorage
+    const fullDataURL = localStorage.getItem("capturedPhoto");
+    
+    const imageDisplay = document.getElementById('capturedImageDisplay');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const loadingText = document.getElementById('loadingText');
+
+    if (fullDataURL && fullDataURL.startsWith('data:image/png')) {
+        
+        // --- Логика отображения ---
+        imageDisplay.src = fullDataURL;
+        imageDisplay.style.display = 'block';
+        loadingText.style.display = 'none';
+
+        downloadBtn.href = fullDataURL;
+        
+        console.log("Фото загружено и готово к скачиванию.");
+
+    } else {
+        // Если данных нет или они некорректны
+        loadingText.textContent = "Ошибка: Фото не найдено или некорректно. Сделайте снимок на предыдущей странице.";
+        loadingText.style.display = 'block';
+        downloadBtn.style.display = 'none';
+        imageDisplay.style.display = 'none';
+        console.error("Нет данных 'capturedPhoto' или они неверного формата.");
+    }
+});
+</script>
+</body>
+
+</html>
