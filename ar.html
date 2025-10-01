@@ -152,44 +152,47 @@
 
       // ---------------- Animate ----------------
       async function animate() {
-      requestAnimationFrame(animate);
-      if(!(source && source.ready && arToolkitContext)) return;
-      arToolkitContext.update(source.domElement);
+        requestAnimationFrame(animate);
+        if(!(source && source.ready && arToolkitContext)) return;
+        arToolkitContext.update(source.domElement);
 
-      overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-      frameCounter++;
+        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+        frameCounter++;
 
-      if(model && frameCounter % 5 === 0){
-        const input = captureFrame();
-        if(input){
-          try {
-            const predictions = await model.executeAsync(input);
-            const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
-            tf.dispose(predictions);
-            tf.dispose(input);
+        if(model && frameCounter % 5 === 0){
+          const input = captureFrame();
+          if(input){
+            try {
+              const predictions = await model.executeAsync(input);
+              const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
+              tf.dispose(predictions);
+              tf.dispose(input);
 
-            overlayCtx.strokeStyle='lime';
-            overlayCtx.fillStyle='red';
-            overlayCtx.lineWidth=2;
+              overlayCtx.strokeStyle='lime';
+              overlayCtx.fillStyle='red';
+              overlayCtx.lineWidth=2;
 
-            boxes.forEach(b=>{
-              overlayCtx.strokeRect(b.x,b.y,b.w,b.h);
-              overlayCtx.beginPath();
-              overlayCtx.arc(b.cx,b.cy,3,0,2*Math.PI);
-              overlayCtx.fill();
+              boxes.forEach(b=>{
+                // рамка
+                overlayCtx.strokeRect(b.x, b.y, b.w, b.h);
 
-              // ✏️ Подпись класса
-              overlayCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
-              overlayCtx.font = "16px Arial";
-              overlayCtx.fillText(`${b.className} ${(b.conf * 100).toFixed(1)}%`, b.x + 5, b.y - 5);
-              overlayCtx.fillStyle = "red";
-            });
-          } catch(e){ console.error(e); }
+                // точка центра
+                overlayCtx.beginPath();
+                overlayCtx.arc(b.cx, b.cy, 3, 0, 2 * Math.PI);
+                overlayCtx.fill();
+
+                // подпись класса и уверенности
+                const labels = ["Гена", "Шапокляк", "Чебурашка", "Волк"];
+                overlayCtx.fillStyle = 'yellow';
+                overlayCtx.font = '16px Arial';
+                overlayCtx.fillText(`${labels[b.cls] || "?"} ${(b.conf * 100).toFixed(1)}%`, b.x, b.y - 5);
+              });
+            } catch(e){ console.error(e); }
+          }
         }
-      }
 
-      if(renderer && scene && camera) renderer.render(scene,camera);
-    }
+        if(renderer && scene && camera) renderer.render(scene,camera);
+      }
 
       // ---------------- Init ----------------
       window.addEventListener('DOMContentLoaded', async ()=>{
