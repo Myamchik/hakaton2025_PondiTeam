@@ -1,0 +1,41 @@
+@font-face {
+  font-family: 'Soyuzmult';
+  src: url('./fonts/soyuzmult.woff2') format('woff2'),
+       url('./fonts/soyuzmult.woff') format('woff'),
+       url('./fonts/soyuzmult.ttf') format('truetype');
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+a-scene {
+    display: block; /* Важно для A-Frame */
+    width: 100%;
+    height: 100%;
+}
+
+#snap-container {
+    position: fixed; 
+    bottom: 20px;    /* Располагает внизу */
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 99; /* Должен быть выше z-index AR-сцены (по умолчанию z-index: 0) */
+}
+
+#captureBtn{
+  position: fixed; 
+  bottom: 20px; 
+  left: 50%; 
+  transform: translateX(-50%);      
+  padding: 12px 20px; 
+  font-size: 16px; 
+  z-index: 9999;
+  font-family: 'Soyuzmult';
+}
