@@ -31,7 +31,7 @@
       canvas#overlay {
         position: fixed;
         top: 0; left: 0;
-        z-index: 9998;
+        z-index: 3;
         pointer-events: none;
       }
 
@@ -55,12 +55,15 @@
         top: 0;
         left: 0;
         width: 100vw;
-        height: 30vh; /* или 200px */
+        height: 150px; /* или 200px */
         object-fit: cover;
         z-index: 9999;
         pointer-events: none;
         display: none;
       }
+      
+
+
 
     </style>
   </head>
@@ -85,7 +88,6 @@
       let genaDetections = [];
 
       let model_3d = null;
-      fckCUBEflag = false;
 
       let showGenaPoint = true;
 
@@ -130,12 +132,14 @@
         });
 
         arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()));
+        
 
         // 💡 Свет
         scene.add(new THREE.AmbientLight(0xffffff, 1));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(1, 1, 1);
         scene.add(dirLight);
+
       }
 
       // ---------------- Capture frame ----------------
@@ -217,15 +221,15 @@
           model_3d.position.sub(center); // смещаем в (0,0,0)
 
           // 📉 Подбираем масштаб
-          model_3d.scale.set(1, 0.7, 1);
+          model_3d.scale.set(1.8, 0.8, 1.8);
 
           // Преобразуем координаты 2D канваса в NDC [-1,1]
-          const xNDC = (genaCenter.x / window.innerWidth) * 2;
+          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
           const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
 
           // Создаем вектор и переводим в координаты сцены
-          const vector = new THREE.Vector3(xNDC, yNDC, -2);
-          vector.unproject(camera);
+          const vector = new THREE.Vector3(xNDC + 1, yNDC - 0.3, -2);
+          vector.unproject(camera); 
 
           const dir = vector.sub(camera.position).normalize();
           const distance = 1.5; // на каком расстоянии от камеры будет куб
@@ -239,32 +243,66 @@
         undefined,
         (err) => console.error('❌ Ошибка загрузки GLB:', err)
       );
+
+      loader.load(
+        './3d_models/orange_slice.glb',
+        (gltf) => {
+          model_3d_2 = gltf.scene;
+
+          // 📏 Центрируем модель
+          const box = new THREE.Box3().setFromObject(model_3d);
+          const center = box.getCenter(new THREE.Vector3());
+          model_3d_2.position.sub(center); // смещаем в (0,0,0)
+
+          // 📉 Подбираем масштаб
+          model_3d_2.scale.set(0.2, 0.1, 0.2);
+
+          // Преобразуем координаты 2D канваса в NDC [-1,1]
+          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
+          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
+
+          // Создаем вектор и переводим в координаты сцены
+          const vector = new THREE.Vector3(xNDC + 0.8, yNDC - 0.15, -2);
+          vector.unproject(camera); 
+
+          const dir = vector.sub(camera.position).normalize();
+          const distance = 1.5; // на каком расстоянии от камеры будет куб
+          const position = camera.position.clone().add(dir.multiplyScalar(distance));
+
+          model_3d_2.position.copy(position);
+
+          scene.add(model_3d_2);
+          console.log('✅ Куб добавлен точно на центр Гены', position);
+        },
+        undefined,
+        (err) => console.error('❌ Ошибка загрузки GLB:', err)
+      );
     }
 
 
     // ---------------- Animate ----------------
     async function animate() {
       requestAnimationFrame(animate);
-      // if (!(source && source.ready && arToolkitContext)) return;
-      // arToolkitContext.update(source.domElement);
+      if (!(source && source.ready && arToolkitContext)) return;
+      arToolkitContext.update(source.domElement);
 
-      //🎥 Принудительное обновление камеры
-      if (source) {
-        source.onResizeElement();
-        arToolkitContext.update(source.domElement);
-        if (source.domElement) {
-          source.domElement.play().catch(()=>{});
-        }
-      }
-
+      // ------------------ Плавное парение
       if (model_3d) {
-        model_3d.rotation.y += 0.01;
-      }
+        // Сохраняем начальную позицию Y
+        if (model_3d.userData.baseY === undefined) {
+          model_3d.userData.baseY = model_3d.position.y;
+          model_3d.userData.floatOffset = 0; // начальное смещение для синуса
+        }
 
-      // if(fckCUBEflag == true){
-      //   addCubeAtGena();
-      //   fckCUBEflag = false;
-      // }
+        // Обновляем смещение
+        model_3d.userData.floatOffset += 0.01; // скорость колебания
+
+        // Парение по синусоиде
+        const floatHeight = 0.05; // амплитуда парения
+        model_3d.position.y = model_3d.userData.baseY + Math.sin(model_3d.userData.floatOffset) * floatHeight;
+
+        model_3d_2.rotation.y += 0.01;
+      }
 
       overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
       frameCounter++;
@@ -326,10 +364,9 @@
                     document.getElementById('overlayGif').style.display = 'block';
 
                     // Добавляем куб в сцену
-                    //fckCUBEflag = true;
                     showGenaPoint = false;
                     addCubeAtGena();
-                  }, 10000);
+                  }, 2000);
                 }
               }
             });
