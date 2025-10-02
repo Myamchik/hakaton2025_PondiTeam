@@ -20,44 +20,67 @@
 
       <div class="cloud-content">
         <h1>Добро пожаловать!</h1>
-        <p class="subtitle">Нажмите кнопку ниже, чтобы cфотографироваться с героями мульфильмов</p>
-        <button id="startAR" class="btn">Сделать фото</button>
+        <p class="subtitle">Прикоснись к миру легендарных героев с помощью своего смартфона</p>
       </div>
     </div>
-    
-    <div class="faq">
-      <div class="character" id="main-character"></div>
-      <button class="faq-question">Что такое дополненная реальность?</button>
-      <div class="faq-answer">
-        <p>
-          Дополненная реальность (AR) — это технология, которая накладывает виртуальные объекты
-          и информацию на реальный мир через камеру вашего устройства.
-          Вы можете видеть и взаимодействовать с цифровыми объектами так,
-          словно они находятся рядом с вами.
-        </p>
-      </div>
+    <div class="block">
+    <div class="ar-section-group"> 
+        
+        <div class="cta-wrapper">
+            <div class="character" id="main-character"></div>
+            
+            <button class="cta-button">
+                <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Чебурашки"
+            </button>
+            
+            <div class="rat-tracks">
+                <div class="splatter splatter-1"></div>
+                <div class="splatter splatter-2"></div>
+                <div class="splatter splatter-3"></div>
+                <div class="splatter splatter-4"></div>
+                <div class="splatter splatter-5"></div>
+            </div>
+        </div>
+        
+        <button class ="cta-button cta-secondary" id="startAR">
+            <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Ну,погоди!"
+        </button>
+
     </div>
-    
+</div>
+
+  <div class="faq">
+    <button class="faq-question"><img src = "images/info.svg" alt="Info Icon" class="info-icon">
+       Что такое дополненная реальность?
+    </button>
+    <div class="faq-answer">
+      <p>
+        Дополненная реальность (AR) — это технология, которая накладывает виртуальные объекты
+        и информацию на реальный мир через камеру вашего устройства.
+        Вы можете видеть и взаимодействовать с цифровыми объектами так,
+        словно они находятся рядом с вами.
+      </p>
+    </div>
   </div>
-  
+</div>
+</div>
+</div>
    <script>
     document.querySelectorAll(".faq-question").forEach((btn) => {
       btn.addEventListener("click", () => {
         btn.classList.toggle("active");
         const answer = btn.nextElementSibling;
         const character = document.getElementById("main-character"); 
-        // Переключаем видимость ответа
+        //видимость ответа
         if (answer.style.display === "block") {
           answer.style.display = "none";
-          character.classList.remove("hidden"); // Показываем персонажа, если FAQ закрыт
         } else {
           answer.style.display = "block";
-          character.classList.add("hidden"); // Скрываем персонажа, если FAQ открыт
         }
       });
     });
     document.getElementById("startAR").addEventListener("click", () => {
-      window.location.href = "ar.html";
+      window.location.href = "ar_wolf.html";
     });
   </script>
 </body>
