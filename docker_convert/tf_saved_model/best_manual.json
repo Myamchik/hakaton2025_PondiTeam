@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "operations": [
+    {
+      "op_name": "PartitionedCall/model_16/tf.math.multiply_252/Mul",
+      "param_target": "inputs",
+      "param_name": "PartitionedCall/model_16/tf.math.multiply_252/Mul/y",
+      "replacement": {
+        "type": "broadcast",
+        "value_shape": [1, 9, 3549]
+      }
+    }
+  ],
+  "_comment": "Manual fix: broadcast Mul to shape [1,9,3549] to include all 4 classes + bbox + objectness"
+}

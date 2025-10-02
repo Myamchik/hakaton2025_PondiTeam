@@ -29,7 +29,7 @@
         <div class="cta-wrapper">
             <div class="character" id="main-character"></div>
             
-            <button class="cta-button">
+            <button class="cta-button" id ="startAR1">
                 <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Чебурашки"
             </button>
             
@@ -42,7 +42,7 @@
             </div>
         </div>
         
-        <button class ="cta-button cta-secondary" id="startAR">
+        <button class ="cta-button cta-secondary" id="startAR2">
             <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Ну,погоди!"
         </button>
 
@@ -79,9 +79,12 @@
         }
       });
     });
-    document.getElementById("startAR").addEventListener("click", () => {
-      window.location.href = "ar_wolf.html";
+    document.getElementById("startAR1").addEventListener("click", () => {
+      window.location.href = "ar_gcs.html";
     });
+     document.getElementById("startAR2").addEventListener("click", () => {
+      window.location.href = "ar_wolf.html";
+     });
   </script>
 </body>
 </html>

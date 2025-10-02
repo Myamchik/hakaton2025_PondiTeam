@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Camera</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
+
+    <link rel="stylesheet" href="ar_style.css"/>
+    <style>
+      #orientationWarning {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5em;
+        text-align: center;
+        z-index: 9999;
+        display: none;
+      }
+
+      canvas#overlay {
+        position: fixed;
+        top: 0; left: 0;
+        z-index: 3;
+        pointer-events: none;
+      }
+
+      #holdMessage {
+        position: fixed;
+        top: 50%;
+        left: 80%;
+        transform: translate(-50%, -50%);
+        background: rgba(160, 86, 202, 0.8);
+        color: #fff;
+        font-size: 1 em;
+        padding: 20px 30px;
+        border-radius: 15px;
+        z-index: 10000;
+        display: none;
+        text-align: center;
+      }
+
+      #overlayGif {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 150px; /* или 200px */
+        object-fit: cover;
+        z-index: 9999;
+        pointer-events: none;
+        display: none;
+      }
+      
+      #loadingScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2em;
+        z-index: 10001; /* выше остальных элементов */
+      }
+
+      #loadingText {
+        text-align: center;
+      }
+
+      #captureBtn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10002;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.8);
+      cursor: pointer;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="orientationWarning">
+      Пожалуйста отключите автоматическую ориентацию экрана,<br>
+      а затем снова поверните ваш телефон вертикально
+    </div>
+
+    <div id="loadingScreen">
+      <div id="loadingText">Загрузка...</div>
+    </div>
+
+
+    <div id="holdMessage">📍 Держите смартфон так, чтобы точка была на гармошке Гены.</div>
+    <img id="overlayGif" src="images/Cloud_Sticker.gif" alt="AR Overlay" />
+
+    <canvas id="overlay"></canvas>
+    <button id="captureBtn">📸 Сделать фото</button>
+
+    <script>
+      let scene, camera, renderer, source, arToolkitContext, model;
+      let overlay, overlayCtx;
+      let frameCounter = 0;
+
+      let detectionDone = false;
+      let genaCenter = null;
+      let genaDetections = [];
+
+      let model_3d = null;
+      let model_3d_2 = null;
+
+      let showGenaPoint = true;
+
+
+      // ---------------- Overlay ----------------
+      function initOverlay() {
+        overlay = document.getElementById('overlay');
+        overlay.width = window.innerWidth;
+        overlay.height = window.innerHeight;
+        overlayCtx = overlay.getContext('2d');
+
+        window.addEventListener('resize', () => {
+          overlay.width = window.innerWidth;
+          overlay.height = window.innerHeight;
+        });
+      }
+
+      // ---------------- AR.js ----------------
+      function initAR() {
+        scene = new THREE.Scene();
+        camera = new THREE.Camera();
+        scene.add(camera);
+
+        renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        source = new THREEx.ArToolkitSource({sourceType:'webcam', sourceWidth:1920, sourceHeight:1080});
+        source.init(() => onResize());
+        window.addEventListener('resize', () => onResize());
+
+        function onResize() {
+          source.onResizeElement();
+          source.copyElementSizeTo(renderer.domElement);
+          if(arToolkitContext && arToolkitContext.arController)
+            source.copyElementSizeTo(arToolkitContext.arController.canvas);
+        }
+
+        arToolkitContext = new THREEx.ArToolkitContext({
+          cameraParametersUrl: './camera_para.dat',
+          detectionMode: 'mono'
+        });
+
+        arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()));
+        
+
+        // 💡 Свет
+        scene.add(new THREE.AmbientLight(0xffffff, 1));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 1, 1);
+        scene.add(dirLight);
+
+      }
+
+      // ---------------- Capture frame ----------------
+      function captureFrame() {
+        if(!source || !source.ready) return null;
+        let tensor = tf.browser.fromPixels(source.domElement);
+        tensor = tf.image.resizeBilinear(tensor, [416,416]);
+        tensor = tensor.expandDims(0).toFloat().div(tf.scalar(255));
+        return tensor;
+      }
+
+      // ---------------- Decode YOLO ----------------
+      function decodeYOLO(predictions, overlayWidth, overlayHeight, confThreshold = 0.3) {
+      const data = predictions.arraySync()[0]; // [8, 3549]
+      const boxes = [];
+      const inputSize = 416;
+      const scaleX = overlayWidth / inputSize;
+      const scaleY = overlayHeight / inputSize;
+
+      const numBoxes = data[0].length;
+
+      for (let i = 0; i < numBoxes; i++) {
+        const objConf = 1 / (1 + Math.exp(-data[4][i])); // сигмоида
+
+        let bestClassIdx = -1;
+        let bestClassScore = 0;
+
+        for (let c = 5; c < data.length; c++) {
+          const classScore = 1 / (1 + Math.exp(-data[c][i]));
+          if (classScore > bestClassScore) {
+            bestClassScore = classScore;
+            bestClassIdx = c - 5;
+          }
+        }
+
+        // 🔥 Финальная уверенность как произведение
+        const finalConf = objConf * bestClassScore;
+
+        if (finalConf < confThreshold) continue;
+
+        const cx = data[0][i] * scaleX;
+        const cy = data[1][i] * scaleY;
+        const w = data[2][i] * scaleX;
+        const h = data[3][i] * scaleY;
+
+        boxes.push({
+          x: cx - w / 2,
+          y: cy - h / 2,
+          w,
+          h,
+          cx,
+          cy,
+          conf: finalConf,
+          cls: bestClassIdx
+        });
+      }
+
+      console.log("📊 Примеры боксов:", boxes.slice(0, 10));
+      return boxes;
+    }
+
+    // ---------------- Добавляем куб ----------------
+    function addCubeAtGena() {
+      if (!genaCenter) {
+        console.warn("❌ Центр Гены ещё не определён!");
+        return;
+      }
+
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        './3d_models/orange.glb',
+        (gltf) => {
+          model_3d = gltf.scene;
+
+          // 📏 Центрируем модель
+          const box = new THREE.Box3().setFromObject(model_3d);
+          const center = box.getCenter(new THREE.Vector3());
+          model_3d.position.sub(center); // смещаем в (0,0,0)
+
+          // 📉 Подбираем масштаб
+          model_3d.scale.set(1.8, 0.8, 1.8);
+
+          // Преобразуем координаты 2D канваса в NDC [-1,1]
+          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
+          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
+
+          // Создаем вектор и переводим в координаты сцены
+          const vector = new THREE.Vector3(xNDC + 1, yNDC - 0.3, -2);
+          vector.unproject(camera); 
+
+          const dir = vector.sub(camera.position).normalize();
+          const distance = 1.5; // на каком расстоянии от камеры будет куб
+          const position = camera.position.clone().add(dir.multiplyScalar(distance));
+
+          model_3d.position.copy(position);
+
+          scene.add(model_3d);
+          console.log('✅ Куб добавлен точно на центр Гены', position);
+        },
+        undefined,
+        (err) => console.error('❌ Ошибка загрузки GLB:', err)
+      );
+
+      loader.load(
+        './3d_models/orange_slice.glb',
+        (gltf) => {
+          model_3d_2 = gltf.scene;
+
+          // 📏 Центрируем модель
+          const box = new THREE.Box3().setFromObject(model_3d);
+          const center = box.getCenter(new THREE.Vector3());
+          model_3d_2.position.sub(center); // смещаем в (0,0,0)
+
+          // 📉 Подбираем масштаб
+          model_3d_2.scale.set(0.2, 0.1, 0.2);
+
+          // Преобразуем координаты 2D канваса в NDC [-1,1]
+          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
+          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
+
+          // Создаем вектор и переводим в координаты сцены
+          const vector = new THREE.Vector3(xNDC + 0.8, yNDC - 0.15, -2);
+          vector.unproject(camera); 
+
+          const dir = vector.sub(camera.position).normalize();
+          const distance = 1.5; // на каком расстоянии от камеры будет куб
+          const position = camera.position.clone().add(dir.multiplyScalar(distance));
+
+          model_3d_2.position.copy(position);
+
+          scene.add(model_3d_2);
+          console.log('✅ Куб добавлен точно на центр Гены', position);
+        },
+        undefined,
+        (err) => console.error('❌ Ошибка загрузки GLB:', err)
+      );
+    }
+
+
+    // ---------------- Animate ----------------
+    async function animate() {
+      requestAnimationFrame(animate);
+      if (!(source && source.ready && arToolkitContext)) return;
+      arToolkitContext.update(source.domElement);
+
+      // ------------------ Плавное парение
+      if (model_3d) {
+        // Сохраняем начальную позицию Y
+        if (model_3d.userData.baseY === undefined) {
+          model_3d.userData.baseY = model_3d.position.y;
+          model_3d.userData.floatOffset = 0; // начальное смещение для синуса
+        }
+
+        // Обновляем смещение
+        model_3d.userData.floatOffset += 0.01; // скорость колебания
+
+        // Парение по синусоиде
+        const floatHeight = 0.05; // амплитуда парения
+        model_3d.position.y = model_3d.userData.baseY + Math.sin(model_3d.userData.floatOffset) * floatHeight;
+
+        model_3d_2.rotation.y += 0.01;
+      }
+
+      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      frameCounter++;
+
+      if (genaCenter && showGenaPoint) {
+        // 💡 Рисуем центр Гены
+        overlayCtx.fillStyle = 'cyan';
+        overlayCtx.beginPath();
+        overlayCtx.arc(genaCenter.x, genaCenter.y, 8, 0, 2 * Math.PI);
+        overlayCtx.fill();
+        overlayCtx.fillText("📍 Гена", genaCenter.x + 10, genaCenter.y);
+        return; // ⛔️ прекращаем распознавание
+      }
+
+      if (model && frameCounter % 8 === 0) {
+        const input = captureFrame();
+        if (input) {
+          try {
+            const predictions = await model.executeAsync(input);
+            const boxes = decodeYOLO(predictions, overlay.width, overlay.height, 0.3);
+            tf.dispose(predictions);
+            tf.dispose(input);
+
+            overlayCtx.strokeStyle = 'lime';
+            overlayCtx.fillStyle = 'red';
+            overlayCtx.lineWidth = 2;
+
+            boxes.forEach(b => {
+              overlayCtx.strokeRect(b.x, b.y, b.w, b.h);
+              overlayCtx.beginPath();
+              overlayCtx.arc(b.cx, b.cy, 3, 0, 2 * Math.PI);
+              overlayCtx.fill();
+
+              const labels = ["Гена", "Шапокляк", "Чебурашка", "Волк"];
+              overlayCtx.fillStyle = 'yellow';
+              overlayCtx.font = '16px Arial';
+              overlayCtx.fillText(`${labels[b.cls] || "?"} ${(b.conf * 100).toFixed(1)}%`, b.x, b.y - 5);
+
+              // 📍 Сохраняем центр Гены
+              if (labels[b.cls] === "Гена" && genaDetections.length < 5) {
+                genaDetections.push({ x: b.cx, y: b.cy });
+                console.log("📌 Найдена Гена:", b.cx, b.cy);
+                if (genaDetections.length === 5) {
+                  // средняя точка по 5 кадрам
+                  const sum = genaDetections.reduce((acc, val) => ({ x: acc.x + val.x, y: acc.y + val.y }), {x:0, y:0});
+                  genaCenter = { x: sum.x / 5, y: sum.y / 5 };
+                  console.log("✅ Центр Гены:", genaCenter);
+
+                  // 🛑 Останавливаем модель
+                  model = null;
+
+                  // 📢 Показываем сообщение
+                  const holdMsg = document.getElementById('holdMessage');
+                  holdMsg.style.display = 'block';
+
+                  // ⏱️ Через 10 секунд скрываем сообщение и показываем гифку
+                  setTimeout(() => {
+                    holdMsg.style.display = 'none';
+                    document.getElementById('overlayGif').style.display = 'block';
+
+                    // Добавляем куб в сцену
+                    showGenaPoint = false;
+                    addCubeAtGena();
+                  }, 7500);
+                }
+              }
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+
+      //if (renderer && scene && camera) renderer.render(scene, camera);
+      renderer.render(scene, camera);
+    }
+
+      // ---------------- Init ----------------
+      window.addEventListener('DOMContentLoaded', async ()=>{
+        initOverlay();
+        initAR();
+
+        console.log("📦 Загружаем модель...");
+        try{
+          model = await tf.loadGraphModel('./tfjs_model/model.json');
+          console.log('✅ Модель загружена!');
+
+          const loadingScreen = document.getElementById('loadingScreen');
+          if (loadingScreen) {
+            loadingScreen.style.display = 'none';
+          }
+        } catch(e){ console.error(e); }
+        animate();
+      });
+
+      // ---------------- Orientation ----------------
+      const warningDiv = document.getElementById('orientationWarning');
+      function checkOrientation(){
+        const isPortrait = window.innerHeight > window.innerWidth;
+        if(!isPortrait){
+          warningDiv.style.display='flex';
+        } else if(warningDiv.style.display==='flex'){
+          warningDiv.style.display='none';
+          if(renderer) document.body.removeChild(renderer.domElement);
+          initAR();
+        }
+      }
+      window.addEventListener('orientationchange', checkOrientation);
+      window.addEventListener('resize', checkOrientation);
+
+
+      // ---------------- Capture Photo ----------------
+      function getVideoElement() {
+        return new Promise((resolve,reject)=>{
+          let attempts=0;
+          const interval=setInterval(()=>{
+            const video=document.querySelector('video');
+            if(video){ clearInterval(interval); resolve(video);}
+            attempts++;
+            if(attempts>50){ clearInterval(interval); reject(new Error("Не удалось найти видеоэлемент камеры")); }
+          },20);
+        });
+      }
+
+      const captureBtn = document.getElementById("captureBtn");
+
+      captureBtn.addEventListener('click', async () => {
+        let videoElement;
+        try {
+          videoElement = await getVideoElement();
+        } catch(err){
+          console.error(err);
+          alert("Ошибка: видеопоток камеры не найден.");
+          return;
+        }
+
+        // Настройки костыля для смещения модели
+        const MODEL_OFFSET_X = -100; // пиксели, подбирай вручную
+        const MODEL_OFFSET_Y = 0;   // пиксели, если нужно по Y
+
+        requestAnimationFrame(() => {
+          try {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = window.innerWidth;
+            tempCanvas.height = window.innerHeight;
+            const ctx = tempCanvas.getContext('2d');
+
+            // 1️⃣ Рисуем видео камеры
+            ctx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+
+            // 2️⃣ Временно сдвигаем модели для фото
+            if(model_3d) {
+              model_3d.position.x += MODEL_OFFSET_X / window.innerWidth * 2;
+              model_3d.position.y += MODEL_OFFSET_Y / window.innerHeight * 2;
+            }
+            if(model_3d_2) {
+              model_3d_2.position.x += MODEL_OFFSET_X / window.innerWidth * 2;
+              model_3d_2.position.y += MODEL_OFFSET_Y / window.innerHeight * 2;
+            }
+
+            // 3️⃣ Рендерим сцену Three.js в текущий WebGL canvas
+            renderer.render(scene, camera);
+
+            // 4️⃣ Снимаем с WebGL canvas
+            ctx.drawImage(renderer.domElement, 0, 0, tempCanvas.width, tempCanvas.height);
+
+            // 5️⃣ Восстанавливаем позиции моделей обратно
+            if(model_3d) {
+              model_3d.position.x -= MODEL_OFFSET_X / window.innerWidth * 2;
+              model_3d.position.y -= MODEL_OFFSET_Y / window.innerHeight * 2;
+            }
+            if(model_3d_2) {
+              model_3d_2.position.x -= MODEL_OFFSET_X / window.innerWidth * 2;
+              model_3d_2.position.y -= MODEL_OFFSET_Y / window.innerHeight * 2;
+            }
+
+            // 6️⃣ Рисуем overlay GIF в том же положении, что на экране
+            const overlayGif = document.getElementById('overlayGif');
+            if(overlayGif.style.display !== 'none') {
+              const rect = overlayGif.getBoundingClientRect();
+              ctx.drawImage(overlayGif, rect.left, rect.top, rect.width, rect.height);
+            }
+
+            // 7️⃣ Генерируем dataURL и сохраняем
+            const dataURL = tempCanvas.toDataURL('image/png');
+            if(dataURL.length < 50) throw new Error("Сгенерированное фото слишком маленькое.");
+
+            localStorage.setItem("capturedPhoto", dataURL);
+            window.location.href = "photo.html";
+
+          } catch(err) {
+            console.error("Ошибка при сохранении скриншота:", err);
+            alert("Не удалось сделать фото :(\n" + err.message);
+          }
+        });
+      });
+
+
+
+
+    </script>
+
+
+  </body>
+</html>
