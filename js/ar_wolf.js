@@ -25,11 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     anchor.addEventListener('targetFound', () => {
         console.log('marker found');
+        const soundComponent = model.components.sound;
+        if (soundComponent) {
+        soundComponent.playSound(); // Запуск звука
+    }
         if (pinnedEntity) { pinnedEntity.remove(); pinnedEntity = null; }
     });
 
     anchor.addEventListener('targetLost', () => {
         console.log('marker lost — создаём pinned clone');
+        const soundComponent = model.components.sound;
+        if (soundComponent) {
+        soundComponent.pauseSound(); // Пауза
+        }
         if (pinnedEntity) {
             console.log('already pinned — skip');
             return;

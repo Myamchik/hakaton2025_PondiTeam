@@ -35,7 +35,7 @@ body {
   width: 95%; 
   max-width: 700px;
   margin: 20px auto;
-  margin-top: 10%;
+  margin-top: 5%;
   animation: float 4s ease-in-out infinite;
 }
 
@@ -69,23 +69,24 @@ body {
 
 .cloud-content h1 {
   color:#face18;
-  font-size: 24px;
-  margin-bottom: 15px;
+  font-size: 32px;
+  margin-top: 40px;
+  line-height: 1.2;
   -webkit-text-stroke: 1px #5ea9ff;
 }
 
 .cloud-content p {
   font-size: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   color:#5e5d5d;
 }
 
 .block {
   width: 85%;
   margin: 0 auto;
-  display: flex;               /* включаем flex */
-  justify-content: center;     /* центрируем по горизонтали */
-  align-items: center;         /* центрируем по вертикали */                 /* расстояние между персонажем и кнопкой */
+  display: flex;               
+  justify-content: center;     
+  align-items: center;                
   padding: 20px 0;
   position: relative;
 }
@@ -97,16 +98,56 @@ body {
   padding-right: 5px;
 }
 
+.ar-section-group {
+    display: flex;
+    flex-direction: column; /* Элементы (cta-wrapper и cta-secondary) идут друг под другом */
+    align-items: center; /* Центрируем содержимое по горизонтали */
+}
+
+.cta-wrapper {
+    display: flex;
+    align-items: center; /* Персонаж и кнопка в один ряд */
+    position: relative;
+    padding-right: 5px;
+    margin-bottom: 15px; /* Отступ, чтобы отделить от нижней кнопки */
+}
+
+.character {
+    width: 120px;
+    height: 160px;
+    background: url('./images/CH_Series_Lariska_POSE_01.png') no-repeat center/contain;
+    position: relative;
+}
+
+.cta-button {
+    width: 220px;
+    height: 65px; 
+    padding: 10px 15px; 
+    border-radius: 35px; 
+    background-color: #face18;
+    font-family: 'Soyuzmult';
+    color: #ffffff; 
+    font-size: 1em;
+    font-weight: 700;
+    border: 2px solid #f4bd25;
+    margin-left: -60px;
+    position: relative; 
+    z-index: 1; 
+    margin-top: 10px; 
+}
+.cta-secondary {
+    margin-left: 55px;
+    margin-right: 0;
+}
+
 .rat-tracks {
     position: absolute;
     bottom: -5%;
     left: 0;
-    width: 100%; /* Ширина на 100% от .block (85% экрана) */
+    width: 100%;
     height: 50px;
     z-index: 0;
 }
-
-/* --- Общие стили для каждой кляксы --- */
 .splatter {
   position: absolute;
   background: url('./images/paw.png') no-repeat center/contain;
@@ -115,24 +156,20 @@ body {
   animation: splatterAppear 7s ease-out forwards 0.1s;
 }
 
-/* --- Анимация появления и смещения для клякс (Оставим ту же) --- */
 @keyframes splatterAppear {
   0% { opacity: 0; } 
-  10% { opacity: 0.6; } /* Клякса появляется */
-  20% { opacity: 0.8; } /* Клякса остается видимой */
+  10% { opacity: 0.6; }
+  20% { opacity: 0.8; }
   100% { opacity: 0.8; }
 }
 
-/* --- Индивидуальные настройки и анимации (Исправлено) --- */
-
-/* Кляксы начинаются с отрицательного 'left', чтобы быть за кадром */
 .splatter-1 {
   width: 4vw; 
   height: 4vw;
   left: -10vw; 
   bottom: 0vh; 
   --rotation: -10deg; 
-  animation-delay: 0s; /* Первая клякса появляется сразу */
+  animation-delay: 0s; 
 }
 
 .splatter-2 {
@@ -171,40 +208,10 @@ body {
   animation-delay: 2.0s;
 }
 
-/* --- Персонаж и Кнопка --- */
-.character {
-  width: 120px;
-  height: 160px;
-  background: url('./images/CH_Series_Lariska_POSE_01.png') no-repeat center/contain;
-  position: relative;
-}
-
-.cta-button {
-  margin-top: 10px;
-  margin-left: -60px; /* подвигаем кнопку ближе к руке */
-  position: relative; /* чтобы кнопка оставалась в потоке */
-  z-index: 1;         /* кнопка поверх персонажа */
-  width: 220px;
-  height: 65px; 
-  padding: 10px 15px; 
-  border-radius: 35px; 
-  background-color: #face18;
-  font-family: 'Soyuzmult';
-  color: #ffffff; 
-  font-size: 1.3em;
-  font-weight: 700;
-  border: 2px solid #f4bd25;
-}
-
 .camera-icon, .info-icon {
-    /* Фиксированный размер, чтобы иконка не была слишком большой */
     width: 24px; 
     height: 24px;
-    
-    /* Добавляем небольшой отступ справа, чтобы отделить иконку от текста */
     margin-right: 4px; 
-    
-    /* Гарантируем вертикальное выравнивание */
     vertical-align: middle; 
 }
 
@@ -220,7 +227,7 @@ body {
   transition: background 0.3s ease;
   text-decoration: underline;
   font-family: 'Soyuzmult';
-  bottom: 0px;
+  margin-top: 20px;
 }
 
 .faq-answer {
@@ -230,9 +237,7 @@ body {
     background: rgba(255, 255, 255, 0.2); 
     backdrop-filter: blur(8px);        
     -webkit-backdrop-filter: blur(8px);   
-    
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); 
-    
     border-radius: 8px;
     margin-top: 10px;
     font-size: 1rem;
@@ -245,13 +250,7 @@ body {
     width: 85%;
   }
 
-  .cloud-content h1 {
-    font-size: 30px;
-    margin-top: 40px;
-    line-height: 1.2;
-  }
-
   .cloud-content p {
-    font-size: 14px;
+    font-size: 18px;
   }
 }

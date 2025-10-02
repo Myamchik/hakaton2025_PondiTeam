@@ -24,19 +24,29 @@
       </div>
     </div>
     <div class="block">
-  <div class="cta-wrapper">
-    <div class="character" id="main-character"></div>
-    <div class="rat-tracks">
-      <div class="splatter splatter-1"></div>
-      <div class="splatter splatter-2"></div>
-      <div class="splatter splatter-3"></div>
-      <div class="splatter splatter-4"></div>
-      <div class="splatter splatter-5"></div>
+    <div class="ar-section-group"> 
+        
+        <div class="cta-wrapper">
+            <div class="character" id="main-character"></div>
+            
+            <button class="cta-button">
+                <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Чебурашки"
+            </button>
+            
+            <div class="rat-tracks">
+                <div class="splatter splatter-1"></div>
+                <div class="splatter splatter-2"></div>
+                <div class="splatter splatter-3"></div>
+                <div class="splatter splatter-4"></div>
+                <div class="splatter splatter-5"></div>
+            </div>
+        </div>
+        
+        <button class ="cta-button cta-secondary" id="startAR">
+            <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon">Сделать фото с героями "Ну,погоди!"
+        </button>
+
     </div>
-    <button class="cta-button" id="startAR">
-    <img src="./images/camera.svg" alt="Camera Icon" class="camera-icon"> Вперёд!
-  </button>
-  </div>
 </div>
 
   <div class="faq">
@@ -53,18 +63,15 @@
     </div>
   </div>
 </div>
-
-    </div>
-    
-  </div>
-  
+</div>
+</div>
    <script>
     document.querySelectorAll(".faq-question").forEach((btn) => {
       btn.addEventListener("click", () => {
         btn.classList.toggle("active");
         const answer = btn.nextElementSibling;
         const character = document.getElementById("main-character"); 
-        // Переключаем видимость ответа
+        //видимость ответа
         if (answer.style.display === "block") {
           answer.style.display = "none";
         } else {

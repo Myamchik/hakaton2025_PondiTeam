@@ -16,18 +16,29 @@
     mindar-image="imageTargetSrc: ./data/targets (1).mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true; precision: medium; preserveDrawingBuffer: true;"
+    renderer="logarithmicDepthBuffer: true; antialias: true; precision: medium;"
     mindar-video-background="true"
     allow-media-access="true">
-
+    <a-entity light="type: ambient; intensity: 1; color: #ffffff"></a-entity>
+    <a-entity light="type: directional; intensity: 0.8; color: #ffffff" position="2 4 2"></a-entity>
+    <a-assets>
+        <audio id="music-audio" src="./audio/nu_pogodi.mp3" preload="auto"></audio> 
+    </a-assets>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
     
     <a-entity mindar-image-target="targetIndex: 0" id="ar-anchor">
         <a-gltf-model id="ar-model" 
               src="./3d_models/boombox.glb" 
               rotation="0 0 0" 
-              position="0 0.05 0" 
-              scale="0.1 0.1 0.1">
+              position="-0.2 -0.2 0"
+              scale="0.1 0.1 0.1"
+              animation="property: scale; 
+               dir: alternate; 
+               dur: 800; 
+               easing: easeInOutSine; 
+               loop: true; 
+               to: 0.1 0.12 0.1"
+               sound="src: #music-audio; autoplay: false; loop: true; volume: 80">
         </a-gltf-model>
     </a-entity>
 </a-scene>
