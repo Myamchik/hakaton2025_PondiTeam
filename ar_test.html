@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR Test Cube</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+    #log {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      max-height: 40vh; overflow-y: auto;
+      background: rgba(0,0,0,0.8); color: #0f0;
+      font-size: 12px; padding: 5px; z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="log"></div>
+
+  <script>
+    let scene, camera, renderer, source, arToolkitContext, markerRoot;
+
+    // лог на экран
+    function log(msg) {
+      console.log(msg);
+      document.getElementById('log').innerHTML += msg + '<br>';
+    }
+
+    init();
+    animate();
+
+    function init() {
+      // ✅ Сцена
+      scene = new THREE.Scene();
+
+      // ✅ Перспективная камера (важно!)
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      scene.add(camera);
+
+      // ✅ Рендерер
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      document.body.appendChild(renderer.domElement);
+
+      // ✅ Источник (камера)
+      source = new THREEx.ArToolkitSource({ sourceType: 'webcam' });
+      source.init(() => resize());
+      window.addEventListener('resize', resize);
+
+      function resize() {
+        source.onResizeElement();
+        source.copyElementSizeTo(renderer.domElement);
+        if (arToolkitContext && arToolkitContext.arController) {
+          source.copyElementSizeTo(arToolkitContext.arController.canvas);
+        }
+      }
+
+      // ✅ Контекст AR
+      arToolkitContext = new THREEx.ArToolkitContext({
+        cameraParametersUrl: './camera_para.dat',
+        detectionMode: 'mono'
+      });
+
+      arToolkitContext.init(() => {
+        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+        log('📷 Камера проинициализирована');
+      });
+
+      // ✅ Свет
+      const ambient = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(ambient);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(1, 1, 1);
+      scene.add(dirLight);
+
+      // ✅ Корневой объект (важно!)
+      markerRoot = new THREE.Group();
+      scene.add(markerRoot);
+
+      // ✅ Куб в markerRoot
+      const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+      const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(0, 0, -1.5); // прямо перед камерой
+      markerRoot.add(cube);
+
+      log('🧊 Куб добавлен: ' + JSON.stringify(cube.position));
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (source && source.ready) {
+        arToolkitContext.update(source.domElement);
+      }
+
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>

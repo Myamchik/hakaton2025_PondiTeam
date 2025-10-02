@@ -6,6 +6,8 @@
     <title>AR Camera</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
 
@@ -60,8 +62,6 @@
         display: none;
       }
 
-
-
     </style>
   </head>
   <body>
@@ -70,10 +70,8 @@
       а затем снова поверните ваш телефон вертикально
     </div>
 
-    <div id="holdMessage">📍 Держите смартфон так, чтобы точки были на Гене и Шапокляк</div>
+    <div id="holdMessage">📍 Держите смартфон так, чтобы точка была на гармошке Гены.</div>
     <img id="overlayGif" src="images/Cloud_Sticker.gif" alt="AR Overlay" />
-
-
 
     <canvas id="overlay"></canvas>
 
@@ -85,6 +83,12 @@
       let detectionDone = false;
       let genaCenter = null;
       let genaDetections = [];
+
+      let model_3d = null;
+      fckCUBEflag = false;
+
+      let showGenaPoint = true;
+
 
       // ---------------- Overlay ----------------
       function initOverlay() {
@@ -126,6 +130,12 @@
         });
 
         arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()));
+
+        // 💡 Свет
+        scene.add(new THREE.AmbientLight(0xffffff, 1));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 1, 1);
+        scene.add(dirLight);
       }
 
       // ---------------- Capture frame ----------------
@@ -187,20 +197,79 @@
       return boxes;
     }
 
+    // ---------------- Добавляем куб ----------------
+    // ---------------- Добавляем куб ----------------
+    function addCubeAtGena() {
+      if (!genaCenter) {
+        console.warn("❌ Центр Гены ещё не определён!");
+        return;
+      }
 
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        './3d_models/orange.glb',
+        (gltf) => {
+          model_3d = gltf.scene;
 
-    // ---------------- Animate ----------------
+          // 📏 Центрируем модель
+          const box = new THREE.Box3().setFromObject(model_3d);
+          const center = box.getCenter(new THREE.Vector3());
+          model_3d.position.sub(center); // смещаем в (0,0,0)
+
+          // 📉 Подбираем масштаб
+          model_3d.scale.set(1, 0.7, 1);
+
+          // Преобразуем координаты 2D канваса в NDC [-1,1]
+          const xNDC = (genaCenter.x / window.innerWidth) * 2;
+          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
+
+          // Создаем вектор и переводим в координаты сцены
+          const vector = new THREE.Vector3(xNDC, yNDC, -2);
+          vector.unproject(camera);
+
+          const dir = vector.sub(camera.position).normalize();
+          const distance = 1.5; // на каком расстоянии от камеры будет куб
+          const position = camera.position.clone().add(dir.multiplyScalar(distance));
+
+          model_3d.position.copy(position);
+
+          scene.add(model_3d);
+          console.log('✅ Куб добавлен точно на центр Гены', position);
+        },
+        undefined,
+        (err) => console.error('❌ Ошибка загрузки GLB:', err)
+      );
+    }
+
 
     // ---------------- Animate ----------------
     async function animate() {
       requestAnimationFrame(animate);
-      if (!(source && source.ready && arToolkitContext)) return;
-      arToolkitContext.update(source.domElement);
+      // if (!(source && source.ready && arToolkitContext)) return;
+      // arToolkitContext.update(source.domElement);
+
+      //🎥 Принудительное обновление камеры
+      if (source) {
+        source.onResizeElement();
+        arToolkitContext.update(source.domElement);
+        if (source.domElement) {
+          source.domElement.play().catch(()=>{});
+        }
+      }
+
+      if (model_3d) {
+        model_3d.rotation.y += 0.01;
+      }
+
+      // if(fckCUBEflag == true){
+      //   addCubeAtGena();
+      //   fckCUBEflag = false;
+      // }
 
       overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
       frameCounter++;
 
-      if (genaCenter) {
+      if (genaCenter && showGenaPoint) {
         // 💡 Рисуем центр Гены
         overlayCtx.fillStyle = 'cyan';
         overlayCtx.beginPath();
@@ -255,6 +324,11 @@
                   setTimeout(() => {
                     holdMsg.style.display = 'none';
                     document.getElementById('overlayGif').style.display = 'block';
+
+                    // Добавляем куб в сцену
+                    //fckCUBEflag = true;
+                    showGenaPoint = false;
+                    addCubeAtGena();
                   }, 10000);
                 }
               }
@@ -265,7 +339,8 @@
         }
       }
 
-      if (renderer && scene && camera) renderer.render(scene, camera);
+      //if (renderer && scene && camera) renderer.render(scene, camera);
+      renderer.render(scene, camera);
     }
 
       // ---------------- Init ----------------
@@ -278,8 +353,8 @@
           model = await tf.loadGraphModel('./tfjs_model/model.json');
           console.log('✅ Модель загружена!');
         } catch(e){ console.error(e); }
-
         animate();
+        //addCubeAtGena();
       });
 
       // ---------------- Orientation ----------------
@@ -298,32 +373,32 @@
       window.addEventListener('resize', checkOrientation);
 
       // ---------------- Log on screen ----------------
-      // function logOnScreen(message){
-      //   let logDiv = document.getElementById('log');
-      //   if(!logDiv){
-      //     logDiv = document.createElement('div');
-      //     logDiv.id='log';
-      //     logDiv.style.position='fixed';
-      //     logDiv.style.bottom='0';
-      //     logDiv.style.left='0';
-      //     logDiv.style.width='100%';
-      //     logDiv.style.maxHeight='40vh';
-      //     logDiv.style.overflowY='auto';
-      //     logDiv.style.background='rgba(0,0,0,0.8)';
-      //     logDiv.style.color='#0f0';
-      //     logDiv.style.fontSize='12px';
-      //     logDiv.style.padding='5px';
-      //     logDiv.style.zIndex='9999';
-      //     document.body.appendChild(logDiv);
-      //   }
-      //   logDiv.innerHTML += message+'<br>';
-      // }
+      function logOnScreen(message){
+        let logDiv = document.getElementById('log');
+        if(!logDiv){
+          logDiv = document.createElement('div');
+          logDiv.id='log';
+          logDiv.style.position='fixed';
+          logDiv.style.bottom='0';
+          logDiv.style.left='0';
+          logDiv.style.width='100%';
+          logDiv.style.maxHeight='40vh';
+          logDiv.style.overflowY='auto';
+          logDiv.style.background='rgba(0,0,0,0.8)';
+          logDiv.style.color='#0f0';
+          logDiv.style.fontSize='12px';
+          logDiv.style.padding='5px';
+          logDiv.style.zIndex='9999';
+          document.body.appendChild(logDiv);
+        }
+        logDiv.innerHTML += message+'<br>';
+      }
 
-      // const originalLog = console.log;
-      // console.log = function(...args){
-      //   originalLog.apply(console,args);
-      //   logOnScreen(args.map(a=>JSON.stringify(a)).join(' '));
-      // };
+      const originalLog = console.log;
+      console.log = function(...args){
+        originalLog.apply(console,args);
+        logOnScreen(args.map(a=>JSON.stringify(a)).join(' '));
+      };
     </script>
   </body>
 </html>
