@@ -11,89 +11,7 @@
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/build/ar-threex.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
 
-    <link rel="stylesheet" href="ar_style.css"/>
-    <style>
-      #orientationWarning {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 1.5em;
-        text-align: center;
-        z-index: 9999;
-        display: none;
-      }
-
-      canvas#overlay {
-        position: fixed;
-        top: 0; left: 0;
-        z-index: 3;
-        pointer-events: none;
-      }
-
-      #holdMessage {
-        position: fixed;
-        top: 50%;
-        left: 80%;
-        transform: translate(-50%, -50%);
-        background: rgba(160, 86, 202, 0.8);
-        color: #fff;
-        font-size: 1 em;
-        padding: 20px 30px;
-        border-radius: 15px;
-        z-index: 10000;
-        display: none;
-        text-align: center;
-      }
-
-      #overlayGif {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 150px; /* или 200px */
-        object-fit: cover;
-        z-index: 9999;
-        pointer-events: none;
-        display: none;
-      }
-      
-      #loadingScreen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 2em;
-        z-index: 10001; /* выше остальных элементов */
-      }
-
-      #loadingText {
-        text-align: center;
-      }
-
-      #captureBtn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10002;
-      padding: 10px 20px;
-      font-size: 1em;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.8);
-      cursor: pointer;
-    }
-    </style>
+    <link rel="stylesheet" href="ar_gcs_style.css"/>
   </head>
   <body>
     <div id="orientationWarning">
@@ -105,12 +23,18 @@
       <div id="loadingText">Загрузка...</div>
     </div>
 
+    <div id="holdMessage">🍊 Апельсин должен быть на гармошке Гены</div>
 
-    <div id="holdMessage">📍 Держите смартфон так, чтобы точка была на гармошке Гены.</div>
     <img id="overlayGif" src="images/Cloud_Sticker.gif" alt="AR Overlay" />
+    <img id="musicGif" src="images/music-notes-sound.gif" alt="Музыкальные ноты" />
+    <img id="lariskaGif" src="images/lariska_animation.gif" alt="Лариска анимация" />
+    <img id="grassImg" src="images/grass.png" alt="Трава" />
+    <img id="genaPointImg" src="images/NPK_OBJECT_05.png" alt="Точка Гены" />
+
+    <audio id="backgroundMusic" src="audio/gena_song.mp3" loop></audio>
 
     <canvas id="overlay"></canvas>
-    <button id="captureBtn">📸 Сделать фото</button>
+    <button id="captureBtn">Сделать фото</button>
 
     <script>
       let scene, camera, renderer, source, arToolkitContext, model;
@@ -210,7 +134,7 @@
           }
         }
 
-        // 🔥 Финальная уверенность как произведение
+        // Финальная уверенность как произведение
         const finalConf = objConf * bestClassScore;
 
         if (finalConf < confThreshold) continue;
@@ -236,84 +160,6 @@
       return boxes;
     }
 
-    // ---------------- Добавляем куб ----------------
-    function addCubeAtGena() {
-      if (!genaCenter) {
-        console.warn("❌ Центр Гены ещё не определён!");
-        return;
-      }
-
-      const loader = new THREE.GLTFLoader();
-      loader.load(
-        './3d_models/orange.glb',
-        (gltf) => {
-          model_3d = gltf.scene;
-
-          // 📏 Центрируем модель
-          const box = new THREE.Box3().setFromObject(model_3d);
-          const center = box.getCenter(new THREE.Vector3());
-          model_3d.position.sub(center); // смещаем в (0,0,0)
-
-          // 📉 Подбираем масштаб
-          model_3d.scale.set(1.8, 0.8, 1.8);
-
-          // Преобразуем координаты 2D канваса в NDC [-1,1]
-          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
-          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
-
-          // Создаем вектор и переводим в координаты сцены
-          const vector = new THREE.Vector3(xNDC + 1, yNDC - 0.3, -2);
-          vector.unproject(camera); 
-
-          const dir = vector.sub(camera.position).normalize();
-          const distance = 1.5; // на каком расстоянии от камеры будет куб
-          const position = camera.position.clone().add(dir.multiplyScalar(distance));
-
-          model_3d.position.copy(position);
-
-          scene.add(model_3d);
-          console.log('✅ Куб добавлен точно на центр Гены', position);
-        },
-        undefined,
-        (err) => console.error('❌ Ошибка загрузки GLB:', err)
-      );
-
-      loader.load(
-        './3d_models/orange_slice.glb',
-        (gltf) => {
-          model_3d_2 = gltf.scene;
-
-          // 📏 Центрируем модель
-          const box = new THREE.Box3().setFromObject(model_3d);
-          const center = box.getCenter(new THREE.Vector3());
-          model_3d_2.position.sub(center); // смещаем в (0,0,0)
-
-          // 📉 Подбираем масштаб
-          model_3d_2.scale.set(0.2, 0.1, 0.2);
-
-          // Преобразуем координаты 2D канваса в NDC [-1,1]
-          const xNDC = (genaCenter.x / window.innerWidth) * 2 - 1;
-          const yNDC = -(genaCenter.y / window.innerHeight) * 2 + 1;
-
-          // Создаем вектор и переводим в координаты сцены
-          const vector = new THREE.Vector3(xNDC + 0.8, yNDC - 0.15, -2);
-          vector.unproject(camera); 
-
-          const dir = vector.sub(camera.position).normalize();
-          const distance = 1.5; // на каком расстоянии от камеры будет куб
-          const position = camera.position.clone().add(dir.multiplyScalar(distance));
-
-          model_3d_2.position.copy(position);
-
-          scene.add(model_3d_2);
-          console.log('✅ Куб добавлен точно на центр Гены', position);
-        },
-        undefined,
-        (err) => console.error('❌ Ошибка загрузки GLB:', err)
-      );
-    }
-
-
     // ---------------- Animate ----------------
     async function animate() {
       requestAnimationFrame(animate);
@@ -331,7 +177,6 @@
         // Обновляем смещение
         model_3d.userData.floatOffset += 0.01; // скорость колебания
 
-        // Парение по синусоиде
         const floatHeight = 0.05; // амплитуда парения
         model_3d.position.y = model_3d.userData.baseY + Math.sin(model_3d.userData.floatOffset) * floatHeight;
 
@@ -342,14 +187,16 @@
       frameCounter++;
 
       if (genaCenter && showGenaPoint) {
-        // 💡 Рисуем центр Гены
-        overlayCtx.fillStyle = 'cyan';
-        overlayCtx.beginPath();
-        overlayCtx.arc(genaCenter.x, genaCenter.y, 8, 0, 2 * Math.PI);
-        overlayCtx.fill();
-        overlayCtx.fillText("📍 Гена", genaCenter.x + 10, genaCenter.y);
+        const genaImg = document.getElementById('genaPointImg');
+        genaImg.style.display = 'block';
+        genaImg.style.left = `${genaCenter.x}px`;
+        genaImg.style.top = `${genaCenter.y}px`;
         return; // ⛔️ прекращаем распознавание
+      } else {
+        const genaImg = document.getElementById('genaPointImg');
+        genaImg.style.display = 'none';
       }
+
 
       if (model && frameCounter % 8 === 0) {
         const input = captureFrame();
@@ -397,9 +244,32 @@
                     holdMsg.style.display = 'none';
                     document.getElementById('overlayGif').style.display = 'block';
 
+                     // ✅ Добавляем появление травы
+                    const grassImg = document.getElementById('grassImg');
+                    grassImg.style.display = 'block';
+
+                    // 🎵 Добавляем гиф с нотами на место Гены
+                    const musicGif = document.getElementById('musicGif');
+                    musicGif.style.display = 'block';
+                    musicGif.style.left = `${genaCenter.x - 60}px`; // центрируем
+                    musicGif.style.top = `${genaCenter.y - 60}px`;
+
+                    // 🔊 Включаем музыку по кругу
+                    const bgMusic = document.getElementById('backgroundMusic');
+                    bgMusic.volume = 0.7;
+                    bgMusic.play().then(() => {
+                      console.log("🎵 Музыка Гены начала играть!");
+                    }).catch(err => console.warn("⚠️ Не удалось запустить музыку:", err));
+
+
+                    // 🐀 Добавляем гиф с Лариской (справа и чуть ниже Гены)
+                    const lariskaGif = document.getElementById('lariskaGif');
+                    lariskaGif.style.display = 'block';
+                    lariskaGif.style.left = `${genaCenter.x + 150}px`;
+                    lariskaGif.style.top = `${genaCenter.y + 15}px`;
+
                     // Добавляем куб в сцену
                     showGenaPoint = false;
-                    addCubeAtGena();
                   }, 7500);
                 }
               }
@@ -450,14 +320,20 @@
 
       // ---------------- Capture Photo ----------------
       function getVideoElement() {
-        return new Promise((resolve,reject)=>{
-          let attempts=0;
-          const interval=setInterval(()=>{
-            const video=document.querySelector('video');
-            if(video){ clearInterval(interval); resolve(video);}
+        return new Promise((resolve, reject) => {
+          let attempts = 0;
+          const interval = setInterval(() => {
+            const video = document.querySelector('video');
+            if (video) {
+              clearInterval(interval);
+              resolve(video);
+            }
             attempts++;
-            if(attempts>50){ clearInterval(interval); reject(new Error("Не удалось найти видеоэлемент камеры")); }
-          },20);
+            if (attempts > 50) {
+              clearInterval(interval);
+              reject(new Error("Не удалось найти видеоэлемент камеры"));
+            }
+          }, 20);
         });
       }
 
@@ -467,15 +343,11 @@
         let videoElement;
         try {
           videoElement = await getVideoElement();
-        } catch(err){
+        } catch (err) {
           console.error(err);
           alert("Ошибка: видеопоток камеры не найден.");
           return;
         }
-
-        // Настройки костыля для смещения модели
-        const MODEL_OFFSET_X = -100; // пиксели, подбирай вручную
-        const MODEL_OFFSET_Y = 0;   // пиксели, если нужно по Y
 
         requestAnimationFrame(() => {
           try {
@@ -484,50 +356,45 @@
             tempCanvas.height = window.innerHeight;
             const ctx = tempCanvas.getContext('2d');
 
-            // 1️⃣ Рисуем видео камеры
+            // Нарисовать видеопоток с камеры
             ctx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
 
-            // 2️⃣ Временно сдвигаем модели для фото
-            if(model_3d) {
-              model_3d.position.x += MODEL_OFFSET_X / window.innerWidth * 2;
-              model_3d.position.y += MODEL_OFFSET_Y / window.innerHeight * 2;
-            }
-            if(model_3d_2) {
-              model_3d_2.position.x += MODEL_OFFSET_X / window.innerWidth * 2;
-              model_3d_2.position.y += MODEL_OFFSET_Y / window.innerHeight * 2;
-            }
-
-            // 3️⃣ Рендерим сцену Three.js в текущий WebGL canvas
-            renderer.render(scene, camera);
-
-            // 4️⃣ Снимаем с WebGL canvas
-            ctx.drawImage(renderer.domElement, 0, 0, tempCanvas.width, tempCanvas.height);
-
-            // 5️⃣ Восстанавливаем позиции моделей обратно
-            if(model_3d) {
-              model_3d.position.x -= MODEL_OFFSET_X / window.innerWidth * 2;
-              model_3d.position.y -= MODEL_OFFSET_Y / window.innerHeight * 2;
-            }
-            if(model_3d_2) {
-              model_3d_2.position.x -= MODEL_OFFSET_X / window.innerWidth * 2;
-              model_3d_2.position.y -= MODEL_OFFSET_Y / window.innerHeight * 2;
-            }
-
-            // 6️⃣ Рисуем overlay GIF в том же положении, что на экране
+            // Нарисовать облачка
             const overlayGif = document.getElementById('overlayGif');
-            if(overlayGif.style.display !== 'none') {
+            if (overlayGif.style.display !== 'none') {
               const rect = overlayGif.getBoundingClientRect();
               ctx.drawImage(overlayGif, rect.left, rect.top, rect.width, rect.height);
             }
 
-            // 7️⃣ Генерируем dataURL и сохраняем
+            // Нарисовать гифку нот
+            const musicGif = document.getElementById('musicGif');
+            if (musicGif.style.display !== 'none') {
+              const rect = musicGif.getBoundingClientRect();
+              ctx.drawImage(musicGif, rect.left, rect.top, rect.width, rect.height);
+            }
+
+            // Нарисовать гифку Лариски
+            const lariskaGif = document.getElementById('lariskaGif');
+            if (lariskaGif.style.display !== 'none') {
+              const rect = lariskaGif.getBoundingClientRect();
+              ctx.drawImage(lariskaGif, rect.left, rect.top, rect.width, rect.height);
+            }
+
+            // Нарисовать траву
+            const grassImg = document.getElementById('grassImg');
+            if (grassImg.style.display !== 'none') {
+              const rect = grassImg.getBoundingClientRect();
+              ctx.drawImage(grassImg, rect.left, rect.top, rect.width, rect.height);
+            }
+
+            // Сохранить результат
             const dataURL = tempCanvas.toDataURL('image/png');
-            if(dataURL.length < 50) throw new Error("Сгенерированное фото слишком маленькое.");
+            if (dataURL.length < 50) throw new Error("Сгенерированное фото слишком маленькое.");
 
             localStorage.setItem("capturedPhoto", dataURL);
             window.location.href = "photo.html";
 
-          } catch(err) {
+          } catch (err) {
             console.error("Ошибка при сохранении скриншота:", err);
             alert("Не удалось сделать фото :(\n" + err.message);
           }
@@ -535,10 +402,6 @@
       });
 
 
-
-
     </script>
-
-
   </body>
 </html>
