@@ -15,8 +15,8 @@
 
   <a-scene>
     <a-assets>
-        <a-asset-item id="character-model" src="./3d_models/Wolk.glb" crossorigin="anonymous"></a-asset-item>
-        <img id="portal-frame" src="./images/Group 1.png" crossorigin="anonymous" />
+        <a-asset-item id="character-model" src="./3d_models/Wolk.glb"></a-asset-item>
+        <img id="portal-frame" src="./images/Group 1.png"/>
     </a-assets>
 
     <a-entity light="type: ambient; intensity: 0.8; color: #ffffff"></a-entity>
@@ -29,7 +29,7 @@
   <button id="captureBtn">Сделать фото</button>
 
   <script>
-        document.addEventListener('DOMContentLoaded',  async  ()  =>  {
+    document.addEventListener('DOMContentLoaded',  async  ()  =>  {
         const  scene  =  document.querySelector('a-scene');
         const  captureBtn  =  document.getElementById('captureBtn');
         const  cameraFeed  =  document.getElementById('cameraFeed');
