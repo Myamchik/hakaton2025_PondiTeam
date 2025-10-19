@@ -19,15 +19,17 @@
         </div>
     </div>
     
-    <a id="downloadBtn" href="#" download="my-ar-photo.png" class="glass-crystal-button" style="text-decoration: none; display: flex; justify-content: center; align-items: center;">
-        ⬇️ Скачать снимок
+    <a id="downloadBtn" href="#" download="my_photo.png" class="glass-crystal-button" style="text-decoration: none; display: flex; justify-content: center; align-items: center;">
+        Скачать фото
     </a>
-    
+    <a href="index.html" class="ar-link">Попробовать еще раз</a>
     <div class="bottom-link">
-        <a href="index.html" class="ar-link">Попробовать еще раз</a>
-        <p>Посетите увлекательный парк! Окунитесь в мир новых впечатлений и познакомьтесь с интерактивными экспонатами. </p>
-        <a href="https://souzmultpark.ru/#about">Подробнее</a>
-    </div>
+    <div class="promo-block">
+    <h2>Посетите увлекательный мир, в котором любимые герои оживают!</h2>
+    <p>Окунитесь в мир новых впечатлений и познакомьтесь с интерактивными экспонатами</p>
+    <a href="https://souzmultpark.ru/#about" class="promo-button">Подробнее →</a>
+  </div>
+</div>
 
 </div>
 
@@ -42,14 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (fullDataURL && fullDataURL.startsWith('data:image/png')) {
         
-        // --- Логика отображения ---
         imageDisplay.src = fullDataURL;
         imageDisplay.style.display = 'block';
         loadingText.style.display = 'none';
 
-        downloadBtn.href = fullDataURL;
-        
-        console.log("Фото загружено и готово к скачиванию.");
+        downloadBtn.href = fullDataURL
 
     } else {
         // Если данных нет или они некорректны
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingText.style.display = 'block';
         downloadBtn.style.display = 'none';
         imageDisplay.style.display = 'none';
-        console.error("Нет данных 'capturedPhoto' или они неверного формата.");
     }
 });
 </script>

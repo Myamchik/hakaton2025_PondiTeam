@@ -1,56 +1,33 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MindAR</title>
-
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
-    <link rel="stylesheet" href="ar_wolf_style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ну погоди</title>
+  
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+  
+  <link rel="stylesheet" href="ar_wolf_style.css"/>
 </head>
 <body>
-    
-<a-scene 
-    mindar-image="imageTargetSrc: ./data/targets (1).mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
-    vr-mode-ui="enabled: false" 
-    device-orientation-permission-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true; precision: medium;"
-    mindar-video-background="true"
-    allow-media-access="true">
-    <a-entity light="type: ambient; intensity: 1; color: #ffffff"></a-entity>
-    <a-entity light="type: directional; intensity: 0.8; color: #ffffff" position="2 4 2"></a-entity>
-    <a-assets>
-        <audio id="music-audio" src="./audio/nu_pogodi.mp3" preload="auto"></audio> 
-    </a-assets>
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    
-    <a-entity mindar-image-target="targetIndex: 0" id="ar-anchor">
-        <a-gltf-model id="ar-model" 
-              src="./3d_models/boombox.glb" 
-              rotation="0 0 0" 
-              position="-0.5 -0.5 0"
-              scale="0.1 0.1 0.1"
-              animation="property: scale; 
-               dir: alternate; 
-               dur: 800; 
-               easing: easeInOutSine; 
-               loop: true; 
-               to: 0.1 0.12 0.1"
-               sound="src: #music-audio; autoplay: false; loop: true; volume: 80">
-        </a-gltf-model>
-    </a-entity>
-</a-scene>
+  <video id="cameraFeed" autoplay playsinline muted></video>
 
-<button id="captureBtn">Сделать фото</button>
-<script src="./js/ar_wolf.js"></script>
-<script>
-    window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        window.location.reload();
-    }
-    });
-</script>
+  <a-scene>
+    <a-assets>
+        <a-asset-item id="character-model" src="./3d_models/Wolk.glb" crossorigin="anonymous"></a-asset-item>
+        <img id="portal-frame" src="./images/Group 1.png" crossorigin="anonymous" />
+    </a-assets>
+
+    <a-entity light="type: ambient; intensity: 0.8; color: #ffffff"></a-entity>
+    <a-entity light="type: directional; intensity: 0.6; color: #ffffff" position="2 4 2"></a-entity>
+
+    <a-camera look-controls></a-camera>
+  </a-scene>
+  <div id="touchMessage">Коснись, чтобы открыть окно в СоюзМультПарк!</div>
+  <div id="swipeMessage">Проведи пальцем по экрану</div>
+  <button id="captureBtn">Сделать фото</button>
+
+  <script src="./js/test.js"></script>
 </body>
 </html>
